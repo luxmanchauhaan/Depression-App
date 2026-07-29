@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# environment variables (secrets - never commit these)
+.env
+**/.env
+
+# expo
+.expo/
+**/.expo/
+dist/
+web-build/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/

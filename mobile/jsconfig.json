@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+      "allowJs": true,
+      "checkJs": false,
+      "lib": ["ES2020", "DOM"]
+    },
+    "exclude": ["node_modules"]
+  }

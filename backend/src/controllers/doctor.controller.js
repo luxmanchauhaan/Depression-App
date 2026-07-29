@@ -1,0 +1,42 @@
+const { Doctor, Patient, User, BdiResponse } = require('../models');
+
+exports.getPatients = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ where: { user_id: req.user.id } });
+
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor record not found for this user.' });
+    }
+
+    const patients = await Patient.findAll({
+      where: { doctor_id: doctor.id },
+      include: [
+        { model: User, attributes: ['full_name', 'email'] },
+        {
+          model: BdiResponse,
+          separate: true,
+          limit: 1,
+          order: [['taken_at', 'DESC']],
+          attributes: ['total_score', 'severity', 'taken_at'],
+        },
+      ],
+    });
+
+    const result = patients.map((p) => {
+      const latest = p.BdiResponses && p.BdiResponses[0];
+      return {
+        patient_id: p.id,
+        full_name: p.User ? p.User.full_name : null,
+        email: p.User ? p.User.email : null,
+        latest_score: latest ? latest.total_score : null,
+        latest_severity: latest ? latest.severity : null,
+        last_taken_at: latest ? latest.taken_at : null,
+      };
+    });
+
+    res.json({ patients: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching patients.' });
+  }
+};
