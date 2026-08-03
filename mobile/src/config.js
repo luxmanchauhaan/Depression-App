@@ -5,4 +5,4 @@
 // Find your IP on Windows: open Command Prompt, run `ipconfig`,
 // look for "IPv4 Address" under your active Wi-Fi adapter.
 
-export const API_URL = 'http://10.111.101.227:4000';
+export const API_URL = 'http://172.17.4.94:4000';

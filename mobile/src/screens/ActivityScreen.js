@@ -6,9 +6,30 @@ export default function ActivityScreen({ token, onNavigate }) {
       <Text style={styles.title}>Activities</Text>
 
       <Text style={styles.sectionHeading}>Cognitive Tests</Text>
+
       <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('memoryTest')}>
         <Text style={styles.testTitle}>Memory Test</Text>
         <Text style={styles.description}>Test your short-term recall with a digit sequence challenge.</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('attentionTest')}>
+        <Text style={styles.testTitle}>Attention Test</Text>
+        <Text style={styles.description}>Tap only when the target letter appears — measures focus and reaction accuracy.</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('visualMemoryTest')}>
+        <Text style={styles.testTitle}>Visual Memory Test</Text>
+        <Text style={styles.description}>Memorize a pattern of highlighted squares and tap them back from memory.</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('processingSpeedTest')}>
+        <Text style={styles.testTitle}>Processing Speed Test</Text>
+        <Text style={styles.description}>Tap as fast as you can when the box turns green — measures reaction time.</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('executiveFunctionTest')}>
+        <Text style={styles.testTitle}>Executive Function Test</Text>
+        <Text style={styles.description}>Tap the ink color, not the word — measures cognitive control.</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => onNavigate('dashboard')} style={{ marginTop: 12, marginBottom: 40 }}>

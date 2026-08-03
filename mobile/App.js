@@ -11,11 +11,17 @@ import PatientSignupScreen from './src/screens/PatientSignupScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ActivityScreen from './src/screens/ActivityScreen';
 import MemoryTestScreen from './src/screens/MemoryTestScreen';
+import AttentionTestScreen from './src/screens/AttentionTestScreen';
+import VisualMemoryTestScreen from './src/screens/VisualMemoryTestScreen';
+import PatientDetailScreen from './src/screens/PatientDetailScreen';
+import ProcessingSpeedTestScreen from './src/screens/ProcessingSpeedTestScreen';
+import ExecutiveFunctionTestScreen from './src/screens/ExecutiveFunctionTestScreen';
 
 
 export default function App() {
   const [screen, setScreen] = useState('landing');
   const [user, setUser] = useState(null); // { token, role, fullName }
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   function handleAuth(authResult) {
     setUser(authResult);
@@ -27,6 +33,11 @@ export default function App() {
     setScreen('landing');
   }
 
+  function handleSelectPatient(patient) {
+    setSelectedPatient(patient);
+    setScreen('patientDetail');
+  }
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -35,7 +46,14 @@ export default function App() {
         {screen === 'doctorSignup' && <DoctorSignupScreen onNavigate={setScreen} onAuth={handleAuth} />}
         {screen === 'patientSignup' && <PatientSignupScreen onNavigate={setScreen} onAuth={handleAuth} />}
         {screen === 'login' && <LoginScreen onNavigate={setScreen} onAuth={handleAuth} />}
-        {screen === 'dashboard' && user && <DashboardScreen user={user} onLogout={handleLogout} onNavigate={setScreen} />}
+        {screen === 'dashboard' && user && (
+          <DashboardScreen
+            user={user}
+            onLogout={handleLogout}
+            onNavigate={setScreen}
+            onSelectPatient={handleSelectPatient}
+          />
+        )}
         {screen === 'questionnaire' && user && (
           <QuestionnaireScreen
             token={user.token}
@@ -48,6 +66,25 @@ export default function App() {
         )}
         {screen === 'memoryTest' && user && (
           <MemoryTestScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'attentionTest' && user && (
+          <AttentionTestScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'visualMemoryTest' && user && (
+          <VisualMemoryTestScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'patientDetail' && user && selectedPatient && (
+          <PatientDetailScreen
+            token={user.token}
+            patient={selectedPatient}
+            onNavigate={setScreen}
+          />
+        )}
+        {screen === 'processingSpeedTest' && user && (
+          <ProcessingSpeedTestScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'executiveFunctionTest' && user && (
+          <ExecutiveFunctionTestScreen token={user.token} onNavigate={setScreen} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { getQuestionnaireHistory, getDoctorPatients } from '../api';
 
-export default function DashboardScreen({ user, onLogout, onNavigate }) {
+export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPatient }) {
   const [history, setHistory] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,10 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
             keyExtractor={(item) => String(item.patient_id)}
             style={styles.list}
             renderItem={({ item }) => (
-              <View style={styles.historyRow}>
+              <TouchableOpacity
+                style={styles.historyRow}
+                onPress={() => onSelectPatient(item)}
+              >
                 <Text style={styles.historyScore}>{item.full_name || item.email}</Text>
                 {item.latest_score !== null ? (
                   <>
@@ -71,7 +74,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
                 ) : (
                   <Text style={styles.historyDate}>No submissions yet</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             )}
           />
         )}

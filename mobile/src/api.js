@@ -92,3 +92,7 @@ export function submitCognitiveResult(token, testType, score, details) {
 export function getCognitiveHistory(token) {
   return authGet('/api/cognitive/history', token);
 }
+
+export function getPatientCognitiveHistory(token, patientId) {
+  return authGet(`/api/doctor/patients/${patientId}/cognitive-history`, token);
+}

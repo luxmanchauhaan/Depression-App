@@ -1,4 +1,4 @@
-const { Doctor, Patient, User, BdiResponse } = require('../models');
+const { Doctor, Patient, User, BdiResponse, CognitiveResult } = require('../models');
 
 exports.getPatients = async (req, res) => {
   try {
@@ -38,5 +38,33 @@ exports.getPatients = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching patients.' });
+  }
+};
+
+exports.getPatientCognitiveHistory = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ where: { user_id: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor record not found for this user.' });
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: req.params.patientId, doctor_id: doctor.id },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found or not assigned to you.' });
+    }
+
+    const results = await CognitiveResult.findAll({
+      where: { patient_id: patient.id },
+      order: [['taken_at', 'DESC']],
+      attributes: ['id', 'test_type', 'score', 'taken_at'],
+    });
+
+    res.json({ results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching cognitive history.' });
   }
 };
