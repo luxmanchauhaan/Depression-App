@@ -91,18 +91,18 @@ CREATE TABLE emotion_captures (
 -- ---------------------------------------------------------------
 -- Assigned daily activities (yoga / meditation / music / physical activity)
 -- ---------------------------------------------------------------
-CREATE TABLE activities (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  patient_id    INT NOT NULL,
-  category      ENUM('yoga', 'meditation', 'music', 'physical_activity') NOT NULL,
-  title         VARCHAR(150) NOT NULL,
-  description   VARCHAR(500),
-  assigned_date DATE NOT NULL,
-  completed     BOOLEAN DEFAULT FALSE,
-  completed_at  TIMESTAMP NULL,
-  FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-  INDEX idx_patient_assigned_date (patient_id, assigned_date)
-);
+-- CREATE TABLE activities (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   patient_id    INT NOT NULL,
+--   category      ENUM('yoga', 'meditation', 'music', 'physical_activity') NOT NULL,
+--   title         VARCHAR(150) NOT NULL,
+--   description   VARCHAR(500),
+--   assigned_date DATE NOT NULL,
+--   completed     BOOLEAN DEFAULT FALSE,
+--   completed_at  TIMESTAMP NULL,
+--   FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+--   INDEX idx_patient_assigned_date (patient_id, assigned_date)
+-- );
 
 -- ---------------------------------------------------------------
 -- Diet / physical activity recommendations, tracked separately from
@@ -130,3 +130,19 @@ CREATE TABLE recommendation_log (
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
 );
+
+
+
+
+
+CREATE TABLE cognitive_results (
+  id INT NOT NULL AUTO_INCREMENT,
+  patient_id INT NOT NULL,
+  test_type ENUM('memory', 'attention', 'processing_speed', 'executive_function', 'visual_memory') NOT NULL,
+  score INT UNSIGNED NOT NULL,
+  details_json JSON DEFAULT NULL,
+  taken_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY patient_id (patient_id),
+  CONSTRAINT cognitive_results_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
