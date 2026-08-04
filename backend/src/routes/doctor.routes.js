@@ -5,5 +5,6 @@ const { requireAuth, requireRole } = require('../middleware/auth.middleware');
 
 router.get('/patients', requireAuth, requireRole('doctor'), doctorController.getPatients);
 router.get('/patients/:patientId/cognitive-history', requireAuth, requireRole('doctor'), doctorController.getPatientCognitiveHistory);
+router.get('/patients/:patientId/bdi-history', requireAuth, requireRole('doctor'), doctorController.getPatientBdiHistory);
 
 module.exports = router;

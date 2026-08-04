@@ -145,4 +145,4 @@ CREATE TABLE cognitive_results (
   PRIMARY KEY (id),
   KEY patient_id (patient_id),
   CONSTRAINT cognitive_results_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

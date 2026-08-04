@@ -1,31 +1,18 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { getQuestionnaireHistory, getDoctorPatients } from '../api';
+import { getDoctorPatients } from '../api';
 
 export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPatient }) {
-  const [history, setHistory] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user.role === 'patient') {
-      loadHistory();
-    } else if (user.role === 'doctor') {
+    if (user.role === 'doctor') {
       loadPatients();
-    }
-  }, []);
-
-  async function loadHistory() {
-    setLoading(true);
-    try {
-      const result = await getQuestionnaireHistory(user.token);
-      setHistory(result.history);
-    } catch (err) {
-      console.log('Failed to load history:', err.message);
-    } finally {
+    } else {
       setLoading(false);
     }
-  }
+  }, []);
 
   async function loadPatients() {
     setLoading(true);
@@ -99,29 +86,9 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
         <Text style={styles.buttonText}>Activities</Text>
       </TouchableOpacity>
 
-      <Text style={styles.historyHeading}>Your history</Text>
-
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 20 }} />
-      ) : history.length === 0 ? (
-        <Text style={styles.emptyText}>No submissions yet.</Text>
-      ) : (
-        <FlatList
-          data={history}
-          keyExtractor={(item) => String(item.id)}
-          style={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.historyRow}>
-              <Text style={styles.historyDate}>
-                {new Date(item.taken_at).toLocaleDateString()}
-              </Text>
-              <Text style={styles.historyScore}>
-                Score: {item.total_score} · {item.severity}
-              </Text>
-            </View>
-          )}
-        />
-      )}
+      <TouchableOpacity style={styles.button} onPress={() => onNavigate('myHistory')}>
+        <Text style={styles.buttonText}>History</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={onLogout}>
         <Text style={styles.buttonText}>Log out</Text>

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 const CATEGORIES = [
@@ -10,10 +9,10 @@ const CATEGORIES = [
   { key: 'executive_function', label: 'Executive Function' },
 ];
 
-export default function PatientDetailScreen({ token, patient, onNavigate, onSelectCategory }) {
+export default function MyHistoryScreen({ onNavigate, onSelectCategory }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{patient.full_name || patient.email}</Text>
+      <Text style={styles.title}>Your History</Text>
 
       {CATEGORIES.map((cat) => (
         <TouchableOpacity
@@ -26,7 +25,7 @@ export default function PatientDetailScreen({ token, patient, onNavigate, onSele
       ))}
 
       <TouchableOpacity onPress={() => onNavigate('dashboard')} style={{ marginTop: 12, marginBottom: 20 }}>
-        <Text style={styles.linkText}>Back to patient list</Text>
+        <Text style={styles.linkText}>Back to dashboard</Text>
       </TouchableOpacity>
     </View>
   );

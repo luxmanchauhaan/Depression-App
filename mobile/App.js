@@ -16,12 +16,16 @@ import VisualMemoryTestScreen from './src/screens/VisualMemoryTestScreen';
 import PatientDetailScreen from './src/screens/PatientDetailScreen';
 import ProcessingSpeedTestScreen from './src/screens/ProcessingSpeedTestScreen';
 import ExecutiveFunctionTestScreen from './src/screens/ExecutiveFunctionTestScreen';
-
+import TestHistoryDetailScreen from './src/screens/TestHistoryDetailScreen';
+import MyHistoryScreen from './src/screens/MyHistoryScreen';
+import MyTestHistoryDetailScreen from './src/screens/MyTestHistoryDetailScreen';
 
 export default function App() {
   const [screen, setScreen] = useState('landing');
   const [user, setUser] = useState(null); // { token, role, fullName }
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedMyCategory, setSelectedMyCategory] = useState(null);
 
   function handleAuth(authResult) {
     setUser(authResult);
@@ -36,6 +40,16 @@ export default function App() {
   function handleSelectPatient(patient) {
     setSelectedPatient(patient);
     setScreen('patientDetail');
+  }
+
+  function handleSelectCategory(category) {
+    setSelectedCategory(category);
+    setScreen('testHistoryDetail');
+  }
+
+  function handleSelectMyCategory(category) {
+    setSelectedMyCategory(category);
+    setScreen('myTestHistoryDetail');
   }
 
   return (
@@ -78,6 +92,7 @@ export default function App() {
             token={user.token}
             patient={selectedPatient}
             onNavigate={setScreen}
+            onSelectCategory={handleSelectCategory}
           />
         )}
         {screen === 'processingSpeedTest' && user && (
@@ -85,6 +100,24 @@ export default function App() {
         )}
         {screen === 'executiveFunctionTest' && user && (
           <ExecutiveFunctionTestScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'testHistoryDetail' && user && selectedPatient && selectedCategory && (
+          <TestHistoryDetailScreen
+            token={user.token}
+            patient={selectedPatient}
+            category={selectedCategory}
+            onNavigate={setScreen}
+          />
+        )}
+        {screen === 'myHistory' && user && (
+          <MyHistoryScreen onNavigate={setScreen} onSelectCategory={handleSelectMyCategory} />
+        )}
+        {screen === 'myTestHistoryDetail' && user && selectedMyCategory && (
+          <MyTestHistoryDetailScreen
+            token={user.token}
+            category={selectedMyCategory}
+            onNavigate={setScreen}
+          />
         )}
       </SafeAreaView>
     </SafeAreaProvider>

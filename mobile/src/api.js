@@ -96,3 +96,7 @@ export function getCognitiveHistory(token) {
 export function getPatientCognitiveHistory(token, patientId) {
   return authGet(`/api/doctor/patients/${patientId}/cognitive-history`, token);
 }
+
+export function getPatientBdiHistory(token, patientId) {
+  return authGet(`/api/doctor/patients/${patientId}/bdi-history`, token);
+}
