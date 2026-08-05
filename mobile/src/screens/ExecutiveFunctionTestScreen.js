@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { submitCognitiveResult } from '../api';
+import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
-const COLORS = [
+const COLOR_WORDS = [
   { name: 'RED', hex: '#D93025' },
   { name: 'BLUE', hex: '#1A73E8' },
   { name: 'GREEN', hex: '#188038' },
@@ -11,12 +13,13 @@ const COLORS = [
 
 const ROUND_COUNT = 15;
 const ROUND_TIMEOUT_MS = 3000;
+const c = categoryColors.executive_function;
 
 export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
-  const [phase, setPhase] = useState('intro'); // intro | running | result
+  const [phase, setPhase] = useState('intro');
   const [round, setRound] = useState(0);
-  const [wordColor, setWordColor] = useState(COLORS[0]);
-  const [inkColor, setInkColor] = useState(COLORS[0]);
+  const [wordColor, setWordColor] = useState(COLOR_WORDS[0]);
+  const [inkColor, setInkColor] = useState(COLOR_WORDS[0]);
   const [submitting, setSubmitting] = useState(false);
 
   const respondedRef = useRef(false);
@@ -37,11 +40,10 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
       return;
     }
 
-    const word = COLORS[Math.floor(Math.random() * COLORS.length)];
-    let ink = COLORS[Math.floor(Math.random() * COLORS.length)];
-    // bias toward mismatched word/ink most of the time, which is the actual test
+    const word = COLOR_WORDS[Math.floor(Math.random() * COLOR_WORDS.length)];
+    let ink = COLOR_WORDS[Math.floor(Math.random() * COLOR_WORDS.length)];
     if (Math.random() < 0.75) {
-      const others = COLORS.filter((c) => c.name !== word.name);
+      const others = COLOR_WORDS.filter((cw) => cw.name !== word.name);
       ink = others[Math.floor(Math.random() * others.length)];
     }
 
@@ -86,11 +88,7 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
         ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
         : 0;
       await submitCognitiveResult(token, 'executive_function', accuracy, {
-        correct,
-        incorrect,
-        timed_out: timedOut,
-        avg_reaction_ms: avgReaction,
-        total_rounds: ROUND_COUNT,
+        correct, incorrect, timed_out: timedOut, avg_reaction_ms: avgReaction, total_rounds: ROUND_COUNT,
       });
     } catch (err) {
       Alert.alert('Failed to save result', err.message);
@@ -99,21 +97,35 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
     }
   }
 
+  const header = (title) => (
+    <View style={[styles.header, { backgroundColor: c.icon }]}>
+      <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
+        <Ionicons name="flash-outline" size={28} color={c.icon} />
+      </View>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+
   if (phase === 'intro') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Executive Function Test</Text>
-        <Text style={styles.instructions}>
-          A color word will appear, printed in a possibly different ink color.
-          Tap the button matching the INK COLOR, not the word itself.
-          {'\n\n'}For example, if the word "RED" appears in blue ink, tap "BLUE".
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={startTest}>
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onNavigate('activities')} style={{ marginTop: 16 }}>
-          <Text style={styles.linkText}>Back to activities</Text>
-        </TouchableOpacity>
+        {header('Executive Function Test')}
+        <View style={styles.body}>
+          <View style={styles.card}>
+            <Text style={styles.instructions}>
+              A color word will appear, printed in a possibly different ink color.
+              Tap the button matching the INK COLOR, not the word itself.
+              {'\n\n'}For example, if the word "RED" appears in blue ink, tap "BLUE".
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon }]} onPress={startTest}>
+            <Text style={styles.primaryButtonText}>Start</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('activities')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
+            <Text style={styles.backLinkText}>Back to activities</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -121,62 +133,79 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
   if (phase === 'running') {
     return (
       <View style={styles.container}>
-        <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
-        <Text style={[styles.wordText, { color: inkColor.hex }]}>{wordColor.name}</Text>
+        {header('Executive Function Test')}
+        <View style={styles.centerBody}>
+          <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
+          <Text style={[styles.wordText, { color: inkColor.hex }]}>{wordColor.name}</Text>
 
-        <View style={styles.answerGrid}>
-          {COLORS.map((c) => (
-            <TouchableOpacity
-              key={c.name}
-              style={[styles.answerButton, { backgroundColor: c.hex }]}
-              onPress={() => handleAnswer(c.name)}
-            >
-              <Text style={styles.answerText}>{c.name}</Text>
-            </TouchableOpacity>
-          ))}
+          <View style={styles.answerGrid}>
+            {COLOR_WORDS.map((cw) => (
+              <TouchableOpacity
+                key={cw.name}
+                style={[styles.answerButton, { backgroundColor: cw.hex }]}
+                onPress={() => handleAnswer(cw.name)}
+              >
+                <Text style={styles.answerText}>{cw.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
     );
   }
 
-  // result
   const { correct, incorrect, timedOut } = statsRef.current;
   const accuracy = Math.round((correct / ROUND_COUNT) * 100);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Test Complete</Text>
-      <Text style={styles.resultText}>Accuracy: {accuracy}%</Text>
-      <Text style={styles.resultSubtext}>Correct: {correct} · Incorrect: {incorrect} · Missed: {timedOut}</Text>
-      {submitting ? (
-        <Text style={styles.instructions}>Saving result...</Text>
-      ) : (
-        <TouchableOpacity style={styles.button} onPress={() => onNavigate('activities')}>
-          <Text style={styles.buttonText}>Back to activities</Text>
-        </TouchableOpacity>
-      )}
+      {header('Test Complete')}
+      <View style={styles.centerBody}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.bg }]}>
+          <Ionicons name="checkmark-circle" size={40} color={c.icon} />
+        </View>
+        <Text style={styles.resultText}>Accuracy: {accuracy}%</Text>
+        <Text style={styles.resultSubtext}>Correct: {correct} · Incorrect: {incorrect} · Missed: {timedOut}</Text>
+        {submitting ? (
+          <Text style={styles.savingText}>Saving result...</Text>
+        ) : (
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon, flexDirection: 'row' }]} onPress={() => onNavigate('activities')}>
+            <Ionicons name="arrow-back-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryButtonText}>Back to activities</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16, textAlign: 'center' },
-  instructions: { fontSize: 14, color: '#555', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  button: { backgroundColor: '#3B6D11', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  linkText: { color: '#3B6D11', fontSize: 14 },
-  progressText: { fontSize: 14, color: '#888', marginBottom: 20 },
-  wordText: { fontSize: 48, fontWeight: '800', marginBottom: 40 },
-  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: 280 },
-  answerButton: {
-    width: 120,
-    paddingVertical: 16,
-    borderRadius: 8,
-    margin: 6,
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    paddingTop: 70,
+    paddingBottom: 24,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
+  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  body: { padding: spacing.md, flex: 1 },
+  centerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, ...shadow },
+  instructions: { fontSize: 14, color: colors.text, lineHeight: 20, textAlign: 'center' },
+  primaryButton: { paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
+  backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
+  progressText: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.sm },
+  wordText: { fontSize: 48, fontWeight: '800', marginBottom: spacing.xl },
+  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: 280 },
+  answerButton: { width: 120, paddingVertical: 16, borderRadius: radius.md, margin: 6, alignItems: 'center', ...shadow },
   answerText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  resultText: { fontSize: 24, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
-  resultSubtext: { fontSize: 14, color: '#666', marginBottom: 24, textAlign: 'center' },
+  resultIconWrap: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  resultText: { fontSize: 22, fontWeight: '700', marginBottom: 8, textAlign: 'center', color: colors.text },
+  resultSubtext: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.lg, textAlign: 'center' },
+  savingText: { fontSize: 14, color: colors.textMuted },
 });

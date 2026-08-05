@@ -1,57 +1,83 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, radius, typography, shadow } from '../theme';
+import { categoryColors } from '../theme';
+
+const TESTS = [
+  { key: 'memoryTest', category: 'memory', label: 'Memory Test', description: 'Recall a digit sequence.', icon: 'extension-puzzle-outline' },
+  { key: 'attentionTest', category: 'attention', label: 'Attention Test', description: 'Tap only the target letter.', icon: 'eye-outline' },
+  { key: 'visualMemoryTest', category: 'visual_memory', label: 'Visual Memory', description: 'Recall a highlighted pattern.', icon: 'grid-outline' },
+  { key: 'processingSpeedTest', category: 'processing_speed', label: 'Processing Speed', description: 'React as fast as you can.', icon: 'speedometer-outline' },
+  { key: 'executiveFunctionTest', category: 'executive_function', label: 'Executive Function', description: 'Tap the ink color, not the word.', icon: 'flash-outline' },
+];
 
 export default function ActivityScreen({ token, onNavigate }) {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Activities</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={typography.title}>Activities</Text>
+        <Text style={typography.subtitle}>Cognitive tests to track your progress</Text>
+      </View>
 
-      <Text style={styles.sectionHeading}>Cognitive Tests</Text>
+      <ScrollView contentContainerStyle={styles.body}>
+        <View style={styles.grid}>
+          {TESTS.map((item) => {
+            const c = categoryColors[item.category];
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.card}
+                onPress={() => onNavigate(item.key)}
+              >
+                <View style={[styles.iconWrap, { backgroundColor: c.bg }]}>
+                  <Ionicons name={item.icon} size={26} color={c.icon} />
+                </View>
+                <Text style={styles.cardTitle}>{item.label}</Text>
+                <Text style={styles.cardDescription}>{item.description}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('memoryTest')}>
-        <Text style={styles.testTitle}>Memory Test</Text>
-        <Text style={styles.description}>Test your short-term recall with a digit sequence challenge.</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('attentionTest')}>
-        <Text style={styles.testTitle}>Attention Test</Text>
-        <Text style={styles.description}>Tap only when the target letter appears — measures focus and reaction accuracy.</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('visualMemoryTest')}>
-        <Text style={styles.testTitle}>Visual Memory Test</Text>
-        <Text style={styles.description}>Memorize a pattern of highlighted squares and tap them back from memory.</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('processingSpeedTest')}>
-        <Text style={styles.testTitle}>Processing Speed Test</Text>
-        <Text style={styles.description}>Tap as fast as you can when the box turns green — measures reaction time.</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.testCard} onPress={() => onNavigate('executiveFunctionTest')}>
-        <Text style={styles.testTitle}>Executive Function Test</Text>
-        <Text style={styles.description}>Tap the ink color, not the word — measures cognitive control.</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => onNavigate('dashboard')} style={{ marginTop: 12, marginBottom: 40 }}>
-        <Text style={styles.linkText}>Back to dashboard</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity onPress={() => onNavigate('dashboard')} style={styles.backLink}>
+          <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
+          <Text style={styles.backLinkText}>Back to dashboard</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 60, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', textAlign: 'center', marginBottom: 20 },
-  sectionHeading: { fontSize: 16, fontWeight: '600', marginTop: 8, marginBottom: 10 },
-  testCard: {
-    borderWidth: 1,
-    borderColor: '#3B6D11',
-    backgroundColor: '#EFF5EA',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 20,
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.primary,
+    paddingTop: 70,
+    paddingBottom: 28,
+    paddingHorizontal: spacing.md,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
-  testTitle: { fontSize: 16, fontWeight: '600', color: '#3B6D11', marginBottom: 4 },
-  description: { fontSize: 13, color: '#666' },
-  linkText: { color: '#3B6D11', textAlign: 'center', fontSize: 14 },
+  body: { padding: spacing.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  card: {
+    width: '48%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    ...shadow,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 2 },
+  cardDescription: { fontSize: 12, color: colors.textMuted, lineHeight: 16 },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
+  backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
 });

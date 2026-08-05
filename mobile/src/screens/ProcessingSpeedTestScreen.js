@@ -1,13 +1,16 @@
 import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { submitCognitiveResult } from '../api';
+import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
 const ROUND_COUNT = 8;
 const MIN_DELAY_MS = 1200;
 const MAX_DELAY_MS = 3000;
+const c = categoryColors.processing_speed;
 
 export default function ProcessingSpeedTestScreen({ token, onNavigate }) {
-  const [phase, setPhase] = useState('intro'); // intro | waiting | ready | tooSoon | result
+  const [phase, setPhase] = useState('intro');
   const [round, setRound] = useState(0);
   const [times, setTimes] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -39,7 +42,6 @@ export default function ProcessingSpeedTestScreen({ token, onNavigate }) {
 
   function handleTap() {
     if (phase === 'waiting') {
-      // tapped too early
       clearTimeout(timerRef.current);
       setPhase('tooSoon');
       setTimeout(() => runRound(round), 1000);
@@ -72,20 +74,34 @@ export default function ProcessingSpeedTestScreen({ token, onNavigate }) {
     }
   }
 
+  const header = (title) => (
+    <View style={[styles.header, { backgroundColor: c.icon }]}>
+      <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
+        <Ionicons name="speedometer-outline" size={28} color={c.icon} />
+      </View>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+
   if (phase === 'intro') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Processing Speed Test</Text>
-        <Text style={styles.instructions}>
-          Wait for the box to turn green, then tap it as fast as you can.
-          Tapping too early restarts that round. This repeats for {ROUND_COUNT} rounds.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={startTest}>
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onNavigate('activities')} style={{ marginTop: 16 }}>
-          <Text style={styles.linkText}>Back to activities</Text>
-        </TouchableOpacity>
+        {header('Processing Speed Test')}
+        <View style={styles.body}>
+          <View style={styles.card}>
+            <Text style={styles.instructions}>
+              Wait for the box to turn green, then tap it as fast as you can.
+              Tapping too early restarts that round. This repeats for {ROUND_COUNT} rounds.
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon }]} onPress={startTest}>
+            <Text style={styles.primaryButtonText}>Start</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('activities')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
+            <Text style={styles.backLinkText}>Back to activities</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -93,62 +109,77 @@ export default function ProcessingSpeedTestScreen({ token, onNavigate }) {
   if (phase === 'waiting' || phase === 'ready' || phase === 'tooSoon') {
     return (
       <View style={styles.container}>
-        <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
-        <TouchableOpacity
-          style={[
-            styles.tapBox,
-            phase === 'ready' && styles.tapBoxReady,
-            phase === 'tooSoon' && styles.tapBoxTooSoon,
-          ]}
-          onPress={handleTap}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.tapBoxText}>
-            {phase === 'waiting' && 'Wait...'}
-            {phase === 'ready' && 'Tap now!'}
-            {phase === 'tooSoon' && 'Too soon — retry'}
-          </Text>
-        </TouchableOpacity>
+        {header('Processing Speed Test')}
+        <View style={styles.centerBody}>
+          <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
+          <TouchableOpacity
+            style={[
+              styles.tapBox,
+              phase === 'waiting' && { backgroundColor: colors.dangerLight, borderWidth: 2, borderColor: colors.danger },
+              phase === 'ready' && { backgroundColor: c.icon },
+              phase === 'tooSoon' && { backgroundColor: colors.danger },
+            ]}
+            onPress={handleTap}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tapBoxText, phase === 'waiting' && { color: colors.danger }]}>
+              {phase === 'waiting' && 'Wait...'}
+              {phase === 'ready' && 'Tap now!'}
+              {phase === 'tooSoon' && 'Too soon — retry'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  // result
   const avg = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Test Complete</Text>
-      <Text style={styles.resultText}>Average reaction time: {avg} ms</Text>
-      {submitting ? (
-        <Text style={styles.instructions}>Saving result...</Text>
-      ) : (
-        <TouchableOpacity style={styles.button} onPress={() => onNavigate('activities')}>
-          <Text style={styles.buttonText}>Back to activities</Text>
-        </TouchableOpacity>
-      )}
+      {header('Test Complete')}
+      <View style={styles.centerBody}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.bg }]}>
+          <Ionicons name="checkmark-circle" size={40} color={c.icon} />
+        </View>
+        <Text style={styles.resultText}>Average reaction time: {avg} ms</Text>
+        {submitting ? (
+          <Text style={styles.savingText}>Saving result...</Text>
+        ) : (
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon, flexDirection: 'row' }]} onPress={() => onNavigate('activities')}>
+            <Ionicons name="arrow-back-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryButtonText}>Back to activities</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16, textAlign: 'center' },
-  instructions: { fontSize: 14, color: '#555', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  button: { backgroundColor: '#3B6D11', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  linkText: { color: '#3B6D11', fontSize: 14 },
-  progressText: { fontSize: 14, color: '#888', marginBottom: 24 },
-  tapBox: {
-    width: 220,
-    height: 220,
-    borderRadius: 16,
-    backgroundColor: '#993C1D',
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    paddingTop: 70,
+    paddingBottom: 24,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
-  tapBoxReady: { backgroundColor: '#3B6D11' },
-  tapBoxTooSoon: { backgroundColor: '#B33A3A' },
-  tapBoxText: { color: '#fff', fontSize: 20, fontWeight: '600' },
-  resultText: { fontSize: 20, marginBottom: 24, textAlign: 'center' },
+  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  body: { padding: spacing.md, flex: 1 },
+  centerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, ...shadow },
+  instructions: { fontSize: 14, color: colors.text, lineHeight: 20, textAlign: 'center' },
+  primaryButton: { paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
+  backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
+  progressText: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md },
+  tapBox: { width: 220, height: 220, borderRadius: radius.lg, justifyContent: 'center', alignItems: 'center', ...shadow },
+  tapBoxText: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  resultIconWrap: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  resultText: { fontSize: 20, marginBottom: spacing.lg, textAlign: 'center', color: colors.text, fontWeight: '600' },
+  savingText: { fontSize: 14, color: colors.textMuted },
 });

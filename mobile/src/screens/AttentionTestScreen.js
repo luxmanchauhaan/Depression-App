@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { submitCognitiveResult } from '../api';
+import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
 const TARGET_LETTER = 'X';
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'X'];
 const ROUND_COUNT = 20;
 const LETTER_DISPLAY_MS = 900;
 const TARGET_PROBABILITY = 0.3;
+const c = categoryColors.attention;
 
 export default function AttentionTestScreen({ token, onNavigate }) {
   const [phase, setPhase] = useState('intro');
@@ -77,10 +80,7 @@ export default function AttentionTestScreen({ token, onNavigate }) {
       const totalTargets = h + m;
       const accuracy = totalTargets > 0 ? Math.round((h / totalTargets) * 100) : 0;
       await submitCognitiveResult(token, 'attention', accuracy, {
-        hits: h,
-        misses: m,
-        false_alarms: f,
-        total_rounds: ROUND_COUNT,
+        hits: h, misses: m, false_alarms: f, total_rounds: ROUND_COUNT,
       });
     } catch (err) {
       Alert.alert('Failed to save result', err.message);
@@ -89,20 +89,34 @@ export default function AttentionTestScreen({ token, onNavigate }) {
     }
   }
 
+  const header = (title) => (
+    <View style={[styles.header, { backgroundColor: c.icon }]}>
+      <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
+        <Ionicons name="eye-outline" size={28} color={c.icon} />
+      </View>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+
   if (phase === 'intro') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Attention Test</Text>
-        <Text style={styles.instructions}>
-          Letters will appear one at a time. Tap the button only when you see
-          the letter "{TARGET_LETTER}" — don't tap for any other letter.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={startTest}>
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onNavigate('activities')} style={{ marginTop: 16 }}>
-          <Text style={styles.linkText}>Back to activities</Text>
-        </TouchableOpacity>
+        {header('Attention Test')}
+        <View style={styles.body}>
+          <View style={styles.card}>
+            <Text style={styles.instructions}>
+              Letters will appear one at a time. Tap the button only when you see
+              the letter "{TARGET_LETTER}" — don't tap for any other letter.
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon }]} onPress={startTest}>
+            <Text style={styles.primaryButtonText}>Start</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('activities')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
+            <Text style={styles.backLinkText}>Back to activities</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -110,11 +124,14 @@ export default function AttentionTestScreen({ token, onNavigate }) {
   if (phase === 'running') {
     return (
       <View style={styles.container}>
-        <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
-        <TouchableOpacity style={styles.letterBox} onPress={handleTap} activeOpacity={0.7}>
-          <Text style={styles.letterText}>{currentLetter}</Text>
-        </TouchableOpacity>
-        <Text style={styles.hint}>Tap the box when you see "{TARGET_LETTER}"</Text>
+        {header('Attention Test')}
+        <View style={styles.centerBody}>
+          <Text style={styles.progressText}>{round} / {ROUND_COUNT}</Text>
+          <TouchableOpacity style={[styles.letterBox, { backgroundColor: c.icon }]} onPress={handleTap} activeOpacity={0.7}>
+            <Text style={styles.letterText}>{currentLetter}</Text>
+          </TouchableOpacity>
+          <Text style={styles.hint}>Tap the box when you see "{TARGET_LETTER}"</Text>
+        </View>
       </View>
     );
   }
@@ -124,31 +141,52 @@ export default function AttentionTestScreen({ token, onNavigate }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Test Complete</Text>
-      <Text style={styles.resultText}>Accuracy: {accuracy}%</Text>
-      <Text style={styles.resultSubtext}>Hits: {hits} · Missed: {misses} · False taps: {falseAlarms}</Text>
-      {submitting ? (
-        <Text style={styles.instructions}>Saving result...</Text>
-      ) : (
-        <TouchableOpacity style={styles.button} onPress={() => onNavigate('activities')}>
-          <Text style={styles.buttonText}>Back to activities</Text>
+      {header('Test Complete')}
+      <View style={styles.centerBody}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.bg }]}>
+          <Ionicons name="checkmark-circle" size={40} color={c.icon} />
+        </View>
+        <Text style={styles.resultText}>Accuracy: {accuracy}%</Text>
+        <Text style={styles.resultSubtext}>Hits: {hits} · Missed: {misses} · False taps: {falseAlarms}</Text>
+        {submitting ? (
+          <Text style={styles.savingText}>Saving result...</Text>
+        ) : (
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon, flexDirection: 'row' }]} onPress={() => onNavigate('activities')}>
+          <Ionicons name="arrow-back-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.primaryButtonText}>Back to activities</Text>
         </TouchableOpacity>
-      )}
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16, textAlign: 'center' },
-  instructions: { fontSize: 14, color: '#555', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  button: { backgroundColor: '#3B6D11', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  linkText: { color: '#3B6D11', fontSize: 14 },
-  progressText: { fontSize: 14, color: '#888', marginBottom: 24 },
-  letterBox: { width: 160, height: 160, borderRadius: 16, backgroundColor: '#3B6D11', justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    paddingTop: 70,
+    paddingBottom: 24,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+  },
+  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  body: { padding: spacing.md, flex: 1 },
+  centerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, ...shadow },
+  instructions: { fontSize: 14, color: colors.text, lineHeight: 20, textAlign: 'center' },
+  primaryButton: { paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
+  backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
+  progressText: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md },
+  letterBox: { width: 160, height: 160, borderRadius: radius.lg, justifyContent: 'center', alignItems: 'center', ...shadow },
   letterText: { fontSize: 72, color: '#fff', fontWeight: '700' },
-  hint: { fontSize: 13, color: '#888', marginTop: 24, textAlign: 'center' },
-  resultText: { fontSize: 24, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
-  resultSubtext: { fontSize: 14, color: '#666', marginBottom: 24, textAlign: 'center' },
+  hint: { fontSize: 13, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' },
+  resultIconWrap: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  resultText: { fontSize: 22, fontWeight: '700', marginBottom: 8, textAlign: 'center', color: colors.text },
+  resultSubtext: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.lg, textAlign: 'center' },
+  savingText: { fontSize: 14, color: colors.textMuted },
 });

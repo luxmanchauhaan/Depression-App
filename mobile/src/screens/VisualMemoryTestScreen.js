@@ -1,14 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { submitCognitiveResult } from '../api';
+import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
-const GRID_SIZE = 4; // 4x4 = 16 cells
+const GRID_SIZE = 4;
 const START_TARGETS = 3;
 const MAX_TARGETS = 10;
 const SHOW_DURATION_MS = 2000;
+const c = categoryColors.visual_memory;
 
 export default function VisualMemoryTestScreen({ token, onNavigate }) {
-  const [phase, setPhase] = useState('intro'); // intro | showing | input | result
+  const [phase, setPhase] = useState('intro');
   const [targetCells, setTargetCells] = useState([]);
   const [selectedCells, setSelectedCells] = useState([]);
   const [level, setLevel] = useState(START_TARGETS);
@@ -75,22 +78,36 @@ export default function VisualMemoryTestScreen({ token, onNavigate }) {
     }
   }
 
+  const header = (title) => (
+    <View style={[styles.header, { backgroundColor: c.icon }]}>
+      <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
+        <Ionicons name="grid-outline" size={28} color={c.icon} />
+      </View>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+
   if (phase === 'intro') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Visual Memory Test</Text>
-        <Text style={styles.instructions}>
-          A pattern of highlighted squares will flash on the grid. Memorize
-          their positions, then tap the same squares once the pattern
-          disappears. Each round adds one more square — the test ends when
-          you make a mistake.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={() => startRound(START_TARGETS)}>
-          <Text style={styles.buttonText}>Start</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => onNavigate('activities')} style={{ marginTop: 16 }}>
-          <Text style={styles.linkText}>Back to activities</Text>
-        </TouchableOpacity>
+        {header('Visual Memory Test')}
+        <View style={styles.body}>
+          <View style={styles.card}>
+            <Text style={styles.instructions}>
+              A pattern of highlighted squares will flash on the grid. Memorize
+              their positions, then tap the same squares once the pattern
+              disappears. Each round adds one more square — the test ends when
+              you make a mistake.
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon }]} onPress={() => startRound(START_TARGETS)}>
+            <Text style={styles.primaryButtonText}>Start</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('activities')} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
+            <Text style={styles.backLinkText}>Back to activities</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -98,52 +115,63 @@ export default function VisualMemoryTestScreen({ token, onNavigate }) {
   if (phase === 'showing' || phase === 'input') {
     return (
       <View style={styles.container}>
-        <Text style={styles.levelText}>
-          {phase === 'showing' ? 'Memorize the pattern' : `Tap the squares (${selectedCells.length}/${targetCells.length})`}
-        </Text>
-        <View style={styles.grid}>
-          {Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => {
-            const isTarget = phase === 'showing' && targetCells.includes(i);
-            const isSelected = phase === 'input' && selectedCells.includes(i);
-            return (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.cell,
-                  isTarget && styles.cellTarget,
-                  isSelected && styles.cellSelected,
-                ]}
-                onPress={() => handleCellPress(i)}
-                disabled={phase !== 'input'}
-              />
-            );
-          })}
+        {header('Visual Memory Test')}
+        <View style={styles.centerBody}>
+          <Text style={styles.levelText}>
+            {phase === 'showing' ? 'Memorize the pattern' : `Tap the squares (${selectedCells.length}/${targetCells.length})`}
+          </Text>
+          <View style={styles.grid}>
+            {Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => {
+              const isTarget = phase === 'showing' && targetCells.includes(i);
+              const isSelected = phase === 'input' && selectedCells.includes(i);
+              return (
+                <TouchableOpacity
+                  key={i}
+                  style={[
+                    styles.cell,
+                    isTarget && { backgroundColor: c.icon },
+                    isSelected && { backgroundColor: c.icon, opacity: 0.6 },
+                  ]}
+                  onPress={() => handleCellPress(i)}
+                  disabled={phase !== 'input'}
+                />
+              );
+            })}
+          </View>
+          {phase === 'input' && (
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                { backgroundColor: selectedCells.length === targetCells.length ? c.icon : colors.border, marginTop: spacing.md },
+              ]}
+              onPress={handleSubmitSelection}
+              disabled={selectedCells.length !== targetCells.length}
+            >
+              <Text style={styles.primaryButtonText}>Submit</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        {phase === 'input' && (
-          <TouchableOpacity
-            style={[styles.button, selectedCells.length !== targetCells.length && styles.buttonDisabled]}
-            onPress={handleSubmitSelection}
-            disabled={selectedCells.length !== targetCells.length}
-          >
-            <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
-        )}
       </View>
     );
   }
 
-  // result
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Test Complete</Text>
-      <Text style={styles.resultText}>Longest pattern recalled: {bestScore} squares</Text>
-      {submitting ? (
-        <Text style={styles.instructions}>Saving result...</Text>
-      ) : (
-        <TouchableOpacity style={styles.button} onPress={() => onNavigate('activities')}>
-          <Text style={styles.buttonText}>Back to activities</Text>
-        </TouchableOpacity>
-      )}
+      {header('Test Complete')}
+      <View style={styles.centerBody}>
+        <View style={[styles.resultIconWrap, { backgroundColor: c.bg }]}>
+          <Ionicons name="checkmark-circle" size={40} color={c.icon} />
+        </View>
+        <Text style={styles.resultText}>Longest pattern recalled: {bestScore} squares</Text>
+        {submitting ? (
+          <Text style={styles.savingText}>Saving result...</Text>
+        ) : (
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon, flexDirection: 'row' }]} onPress={() => onNavigate('activities')}>
+            <Ionicons name="arrow-back-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryButtonText}>Back to activities</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -152,29 +180,37 @@ const CELL_SIZE = 60;
 const CELL_GAP = 8;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16, textAlign: 'center' },
-  instructions: { fontSize: 14, color: '#555', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  button: { backgroundColor: '#3B6D11', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, marginTop: 20 },
-  buttonDisabled: { backgroundColor: '#aaa' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '500' },
-  linkText: { color: '#3B6D11', fontSize: 14 },
-  levelText: { fontSize: 16, color: '#666', marginBottom: 20, textAlign: 'center' },
-  grid: {
-    width: GRID_SIZE * (CELL_SIZE + CELL_GAP),
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    paddingTop: 70,
+    paddingBottom: 24,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
+  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  body: { padding: spacing.md, flex: 1 },
+  centerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, ...shadow },
+  instructions: { fontSize: 14, color: colors.text, lineHeight: 20, textAlign: 'center' },
+  primaryButton: { paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
+  backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
+  levelText: { fontSize: 16, color: colors.textMuted, marginBottom: spacing.md, textAlign: 'center' },
+  grid: { width: GRID_SIZE * (CELL_SIZE + CELL_GAP), flexDirection: 'row', flexWrap: 'wrap' },
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
     margin: CELL_GAP / 2,
-    borderRadius: 8,
-    backgroundColor: '#e8e8e8',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
   },
-  cellTarget: { backgroundColor: '#3B6D11' },
-  cellSelected: { backgroundColor: '#7DA860' },
-  resultText: { fontSize: 18, marginBottom: 24, textAlign: 'center' },
+  resultIconWrap: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  resultText: { fontSize: 18, marginBottom: spacing.lg, textAlign: 'center', color: colors.text, fontWeight: '600' },
+  savingText: { fontSize: 14, color: colors.textMuted },
 });

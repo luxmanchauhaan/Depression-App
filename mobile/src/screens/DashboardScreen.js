@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { getDoctorPatients } from '../api';
+import { colors, spacing, radius, typography, shadow, buttonBase } from '../theme';
 
 export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPatient }) {
   const [patients, setPatients] = useState([]);
@@ -29,91 +31,156 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
   if (user.role === 'doctor') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Welcome, {user.fullName || 'there'}</Text>
-        <Text style={styles.subtitle}>Logged in as: {user.role}</Text>
+        <View style={styles.header}>
+          <Text style={typography.title}>Welcome, {user.fullName || 'there'}</Text>
+          <Text style={typography.subtitle}>Logged in as: {user.role}</Text>
+        </View>
 
-        <Text style={styles.historyHeading}>Your patients</Text>
+        <View style={styles.body}>
+          <Text style={[typography.sectionHeading, styles.sectionSpacing]}>Your patients</Text>
 
-        {loading ? (
-          <ActivityIndicator style={{ marginTop: 20 }} />
-        ) : patients.length === 0 ? (
-          <Text style={styles.emptyText}>No patients assigned yet.</Text>
-        ) : (
-          <FlatList
-            data={patients}
-            keyExtractor={(item) => String(item.patient_id)}
-            style={styles.list}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.historyRow}
-                onPress={() => onSelectPatient(item)}
-              >
-                <Text style={styles.historyScore}>{item.full_name || item.email}</Text>
-                {item.latest_score !== null ? (
-                  <>
-                    <Text style={styles.historyDate}>
-                      Latest: {item.latest_score} · {item.latest_severity}
-                    </Text>
-                    <Text style={styles.historyDate}>
-                      {new Date(item.last_taken_at).toLocaleDateString()}
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={styles.historyDate}>No submissions yet</Text>
-                )}
-              </TouchableOpacity>
-            )}
-          />
-        )}
+          {loading ? (
+            <ActivityIndicator style={{ marginTop: 20 }} color={colors.primary} />
+          ) : patients.length === 0 ? (
+            <Text style={styles.emptyText}>No patients assigned yet.</Text>
+          ) : (
+            <FlatList
+              data={patients}
+              keyExtractor={(item) => String(item.patient_id)}
+              style={styles.list}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.listCard} onPress={() => onSelectPatient(item)}>
+                  <View style={styles.listCardIcon}>
+                    <Ionicons name="person" size={20} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={typography.cardTitle}>{item.full_name || item.email}</Text>
+                    {item.latest_score !== null ? (
+                      <>
+                        <Text style={typography.cardDescription}>
+                          Latest: {item.latest_score} · {item.latest_severity}
+                        </Text>
+                        <Text style={styles.dateText}>
+                          {new Date(item.last_taken_at).toLocaleDateString()}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={typography.cardDescription}>No submissions yet</Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            />
+          )}
 
-        <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={onLogout}>
-          <Text style={styles.buttonText}>Log out</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+            <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Log out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
+  const menuItems = [
+    { key: 'questionnaire', label: 'Questionnaire', icon: 'clipboard-outline' },
+    { key: 'activities', label: 'Activities', icon: 'game-controller-outline' },
+    { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
+  ];
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome, {user.fullName || 'there'}</Text>
-      <Text style={styles.subtitle}>Logged in as: {user.role}</Text>
+      <View style={styles.header}>
+        <Text style={typography.title}>Welcome, {user.fullName || 'there'}</Text>
+        <Text style={typography.subtitle}>Logged in as: {user.role}</Text>
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => onNavigate('questionnaire')}>
-        <Text style={styles.buttonText}>Take questionnaire</Text>
-      </TouchableOpacity>
+      <View style={styles.body}>
+        <View style={styles.grid}>
+          {menuItems.map((item) => (
+            <TouchableOpacity key={item.key} style={styles.gridCard} onPress={() => onNavigate(item.key)}>
+              <View style={styles.gridIconWrap}>
+                <Ionicons name={item.icon} size={26} color={colors.primary} />
+              </View>
+              <Text style={styles.gridCardText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => onNavigate('activities')}>
-        <Text style={styles.buttonText}>Activities</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={() => onNavigate('myHistory')}>
-        <Text style={styles.buttonText}>History</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={onLogout}>
-        <Text style={styles.buttonText}>Log out</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+          <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
+          <Text style={styles.logoutButtonText}>Log out</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
+const CARD_GAP = spacing.sm;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 60, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24 },
-  button: { backgroundColor: '#3B6D11', paddingVertical: 14, borderRadius: 8, marginBottom: 12 },
-  logoutButton: { backgroundColor: '#993C1D', marginTop: 'auto' },
-  buttonText: { color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: '500' },
-  historyHeading: { fontSize: 16, fontWeight: '600', marginTop: 8, marginBottom: 8 },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 12 },
-  list: { flex: 1, marginBottom: 12 },
-  historyRow: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.primary,
+    paddingTop: 70,
+    paddingBottom: 28,
+    paddingHorizontal: spacing.md,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
-  historyDate: { fontSize: 13, color: '#666', marginBottom: 4 },
-  historyScore: { fontSize: 15, fontWeight: '500' },
+  body: { flex: 1, padding: spacing.md },
+  sectionSpacing: { marginBottom: spacing.sm },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridCard: {
+    width: '48%',
+    aspectRatio: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: CARD_GAP,
+    ...shadow,
+  },
+  gridIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  gridCardText: { fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  logoutButton: {
+    ...buttonBase,
+    backgroundColor: colors.dangerLight,
+    marginTop: 'auto',
+  },
+  logoutButtonText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
+  emptyText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
+  list: { flex: 1, marginBottom: spacing.sm },
+  listCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    ...shadow,
+  },
+  listCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  dateText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 });
