@@ -99,10 +99,12 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
 
   const header = (title) => (
     <View style={[styles.header, { backgroundColor: c.icon }]}>
-      <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
-        <Ionicons name="flash-outline" size={28} color={c.icon} />
+      <View style={styles.headerRow}>
+        <View style={[styles.headerIconWrap, { backgroundColor: c.bg }]}>
+          <Ionicons name="flash-outline" size={26} color={c.icon} />
+        </View>
+        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
       </View>
-      <Text style={styles.headerTitle}>{title}</Text>
     </View>
   );
 
@@ -159,7 +161,7 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
 
   return (
     <View style={styles.container}>
-      {header('Test Complete')}
+      {header('Test Completed')}
       <View style={styles.centerBody}>
         <View style={[styles.resultIconWrap, { backgroundColor: c.bg }]}>
           <Ionicons name="checkmark-circle" size={40} color={c.icon} />
@@ -169,8 +171,12 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
         {submitting ? (
           <Text style={styles.savingText}>Saving result...</Text>
         ) : (
-          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: c.icon, flexDirection: 'row' }]} onPress={() => onNavigate('activities')}>
-            <Ionicons name="arrow-back-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <TouchableOpacity
+            style={[styles.primaryButton, styles.elevatedButton, { backgroundColor: c.icon, width: '100%' }]}
+            activeOpacity={0.85}
+            onPress={() => onNavigate('activities')}
+          >
+            <Ionicons name="arrow-back" size={18} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.primaryButtonText}>Back to activities</Text>
           </TouchableOpacity>
         )}
@@ -182,21 +188,23 @@ export default function ExecutiveFunctionTestScreen({ token, onNavigate }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
-    paddingTop: 70,
-    paddingBottom: 24,
+    paddingTop: 44,
+    paddingBottom: 16,
     paddingHorizontal: spacing.md,
-    alignItems: 'center',
+    justifyContent: 'center',
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
   },
-  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', height: 48 },
+  headerIconWrap: { width: 48, height: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  headerTitle: { fontSize: 19, fontWeight: '700', color: '#fff', lineHeight: 24, includeFontPadding: false, textAlignVertical: 'center' },
   body: { padding: spacing.md, flex: 1 },
   centerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   card: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, ...shadow },
   instructions: { fontSize: 14, color: colors.text, lineHeight: 20, textAlign: 'center' },
-  primaryButton: { paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  primaryButton: { paddingVertical: 16, paddingHorizontal: 24, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  elevatedButton: { flexDirection: 'row', elevation: 4, ...shadow },
   backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
   backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
   progressText: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.sm },

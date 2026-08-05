@@ -15,8 +15,8 @@ export default function ActivityScreen({ token, onNavigate }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={typography.title}>Activities</Text>
-        <Text style={typography.subtitle}>Cognitive tests to track your progress</Text>
+        <Text style={[typography.title, styles.headerTitle]}>Cognitive Activities</Text>
+        <Text style={[typography.subtitle, styles.headerSubtitle]}>Cognitive tests to track your progress</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -52,12 +52,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     backgroundColor: colors.primary,
-    paddingTop: 70,
-    paddingBottom: 28,
+    paddingTop: 44,
+    paddingBottom: 18,
     paddingHorizontal: spacing.md,
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
   },
+  headerTitle: { includeFontPadding: false, textAlignVertical: 'center' },
+  headerSubtitle: { marginTop: 2, includeFontPadding: false, textAlignVertical: 'center' },
   body: { padding: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   card: {

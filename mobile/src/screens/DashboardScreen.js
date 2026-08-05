@@ -32,8 +32,8 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={typography.title}>Welcome, {user.fullName || 'there'}</Text>
-          <Text style={typography.subtitle}>Logged in as: {user.role}</Text>
+          <Text style={[typography.title, styles.headerTitle]}>Welcome, {user.fullName || 'there'}</Text>
+          <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
         </View>
 
         <View style={styles.body}>
@@ -85,15 +85,15 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
 
   const menuItems = [
     { key: 'questionnaire', label: 'Questionnaire', icon: 'clipboard-outline' },
-    { key: 'activities', label: 'Activities', icon: 'game-controller-outline' },
+    { key: 'activities', label: 'Cognitive Activities', icon: 'game-controller-outline' },
     { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={typography.title}>Welcome, {user.fullName || 'there'}</Text>
-        <Text style={typography.subtitle}>Logged in as: {user.role}</Text>
+        <Text style={[typography.title, styles.headerTitle]}>Welcome, {user.fullName || 'there'}</Text>
+        <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
       </View>
 
       <View style={styles.body}>
@@ -123,12 +123,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     backgroundColor: colors.primary,
-    paddingTop: 70,
-    paddingBottom: 28,
+    paddingTop: 44,
+    paddingBottom: 18,
     paddingHorizontal: spacing.md,
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
   },
+  headerTitle: { includeFontPadding: false, textAlignVertical: 'center' },
+  headerSubtitle: { marginTop: 2, includeFontPadding: false, textAlignVertical: 'center' },
   body: { flex: 1, padding: spacing.md },
   sectionSpacing: { marginBottom: spacing.sm },
   grid: {
