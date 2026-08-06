@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-import { getPatientBdiHistory, getPatientCognitiveHistory } from '../api';
+import { getPatientBdiHistory, getPatientCognitiveHistory, getPatientSleepHistory, getPatientWeightHistory } from '../api';
 import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
 const LABELS = {
@@ -12,6 +12,8 @@ const LABELS = {
   visual_memory: 'Visual Memory',
   processing_speed: 'Processing Speed',
   executive_function: 'Executive Function',
+  sleep: 'Sleep Log',
+  weight: 'Weight Log',
 };
 
 const ICONS = {
@@ -21,6 +23,8 @@ const ICONS = {
   visual_memory: 'grid-outline',
   processing_speed: 'speedometer-outline',
   executive_function: 'flash-outline',
+  sleep: 'moon-outline',
+  weight: 'scale-outline',
 };
 
 export default function TestHistoryDetailScreen({ token, patient, category, onNavigate }) {
@@ -40,6 +44,12 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
       if (category === 'bdi') {
         const result = await getPatientBdiHistory(token, patient.patient_id);
         setEntries(result.history);
+      } else if (category === 'sleep') {
+        const result = await getPatientSleepHistory(token, patient.patient_id);
+        setEntries(result.history);
+      } else if (category === 'weight') {
+        const result = await getPatientWeightHistory(token, patient.patient_id);
+        setEntries(result.history);
       } else {
         const result = await getPatientCognitiveHistory(token, patient.patient_id);
         setEntries(result.results.filter((r) => r.test_type === category));
@@ -52,15 +62,22 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
   }
 
   function getScore(item) {
-    return category === 'bdi' ? item.total_score : item.score;
+    if (category === 'bdi') return item.total_score;
+    if (category === 'sleep') return parseFloat(item.hours_slept);
+    if (category === 'weight') return parseFloat(item.weight_kg);
+    return item.score;
+  }
+
+  function getDate(item) {
+    return category === 'sleep' || category === 'weight' ? item.logged_date : item.taken_at;
   }
 
   const chronological = [...entries].reverse();
 
   function daysSpan() {
     if (chronological.length === 0) return 0;
-    const first = new Date(chronological[0].taken_at);
-    const last = new Date(chronological[chronological.length - 1].taken_at);
+    const first = new Date(getDate(chronological[0]));
+    const last = new Date(getDate(chronological[chronological.length - 1]));
     return Math.round((last - first) / (1000 * 60 * 60 * 24)) + 1;
   }
 
@@ -68,7 +85,7 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
 
   const chartData = {
     labels: chronological.map((item) =>
-      new Date(item.taken_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      new Date(getDate(item)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     ),
     datasets: [{ data: chronological.map((item) => getScore(item)) }],
   };
@@ -120,7 +137,7 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
                       backgroundColor: colors.surface,
                       backgroundGradientFrom: colors.surface,
                       backgroundGradientTo: colors.surface,
-                      decimalPlaces: 0,
+                      decimalPlaces: category === 'sleep' || category === 'weight' ? 1 : 0,
                       color: (opacity = 1) => c.icon,
                       labelColor: (opacity = 1) => colors.textMuted,
                       propsForDots: { r: '5', strokeWidth: '2', stroke: c.icon, fill: colors.surface },
@@ -129,7 +146,7 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
                     style={{ borderRadius: radius.md, marginLeft: -spacing.sm }}
                     onDataPointClick={({ index, x, y }) => {
                       const item = chronological[index];
-                      setTooltip({ x, y, date: new Date(item.taken_at).toLocaleDateString(), score: getScore(item) });
+                      setTooltip({ x, y, date: new Date(getDate(item)).toLocaleDateString(), score: getScore(item) });
                     }}
                   />
                   {tooltip && (
@@ -153,10 +170,14 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
                   <View style={{ flex: 1 }}>
                     {category === 'bdi' ? (
                       <Text style={styles.rowScore}>Score: {item.total_score} · {item.severity}</Text>
+                    ) : category === 'sleep' ? (
+                      <Text style={styles.rowScore}>{item.hours_slept}h · {item.quality}</Text>
+                    ) : category === 'weight' ? (
+                      <Text style={styles.rowScore}>{item.weight_kg} kg</Text>
                     ) : (
                       <Text style={styles.rowScore}>Score: {item.score}</Text>
                     )}
-                    <Text style={styles.rowDate}>{new Date(item.taken_at).toLocaleDateString()}</Text>
+                    <Text style={styles.rowDate}>{new Date(getDate(item)).toLocaleDateString()}</Text>
                   </View>
                 </View>
               )}

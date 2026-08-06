@@ -1,4 +1,4 @@
-const { Doctor, Patient, User, BdiResponse, CognitiveResult } = require('../models');
+const { Doctor, Patient, User, BdiResponse, CognitiveResult, SleepLog, WeightLog } = require('../models');
 
 exports.getPatients = async (req, res) => {
   try {
@@ -94,5 +94,59 @@ exports.getPatientBdiHistory = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching BDI history.' });
+  }
+};
+
+exports.getPatientSleepHistory = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ where: { user_id: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor record not found for this user.' });
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: req.params.patientId, doctor_id: doctor.id },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found or not assigned to you.' });
+    }
+
+    const history = await SleepLog.findAll({
+      where: { patient_id: patient.id },
+      order: [['logged_date', 'DESC']],
+    });
+
+    res.json({ history });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching sleep history.' });
+  }
+};
+
+exports.getPatientWeightHistory = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ where: { user_id: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor record not found for this user.' });
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: req.params.patientId, doctor_id: doctor.id },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found or not assigned to you.' });
+    }
+
+    const history = await WeightLog.findAll({
+      where: { patient_id: patient.id },
+      order: [['logged_date', 'DESC']],
+    });
+
+    res.json({ history });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching weight history.' });
   }
 };

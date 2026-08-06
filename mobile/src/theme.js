@@ -63,4 +63,6 @@ export const colors = {
     processing_speed: { bg: '#FDE0E0', icon: '#E07A7A' },
     executive_function: { bg: '#DFF5E3', icon: '#5FAE7B' },
     bdi: { bg: '#E1E7FB', icon: '#6C7FD6' },
+    sleep: { bg: '#E1E7FB', icon: '#6C7FD6' },
+    weight: { bg: '#DFF5E3', icon: '#5FAE7B' },
   };

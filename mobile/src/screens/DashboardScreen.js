@@ -1,34 +1,13 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getDoctorPatients } from '../api';
 import { colors, spacing, radius, typography, shadow, buttonBase } from '../theme';
 
-export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPatient }) {
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (user.role === 'doctor') {
-      loadPatients();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  async function loadPatients() {
-    setLoading(true);
-    try {
-      const result = await getDoctorPatients(user.token);
-      setPatients(result.patients);
-    } catch (err) {
-      console.log('Failed to load patients:', err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default function DashboardScreen({ user, onLogout, onNavigate }) {
   if (user.role === 'doctor') {
+    const doctorMenuItems = [
+      { key: 'patientList', label: 'Patients', icon: 'people-outline' },
+    ];
+
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -37,42 +16,16 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
         </View>
 
         <View style={styles.body}>
-          <Text style={[typography.sectionHeading, styles.sectionSpacing]}>Your patients</Text>
-
-          {loading ? (
-            <ActivityIndicator style={{ marginTop: 20 }} color={colors.primary} />
-          ) : patients.length === 0 ? (
-            <Text style={styles.emptyText}>No patients assigned yet.</Text>
-          ) : (
-            <FlatList
-              data={patients}
-              keyExtractor={(item) => String(item.patient_id)}
-              style={styles.list}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listCard} onPress={() => onSelectPatient(item)}>
-                  <View style={styles.listCardIcon}>
-                    <Ionicons name="person" size={20} color={colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={typography.cardTitle}>{item.full_name || item.email}</Text>
-                    {item.latest_score !== null ? (
-                      <>
-                        <Text style={typography.cardDescription}>
-                          Latest: {item.latest_score} · {item.latest_severity}
-                        </Text>
-                        <Text style={styles.dateText}>
-                          {new Date(item.last_taken_at).toLocaleDateString()}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={typography.cardDescription}>No submissions yet</Text>
-                    )}
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            />
-          )}
+          <View style={styles.grid}>
+            {doctorMenuItems.map((item) => (
+              <TouchableOpacity key={item.key} style={styles.gridCard} onPress={() => onNavigate(item.key)}>
+                <View style={styles.gridIconWrap}>
+                  <Ionicons name={item.icon} size={26} color={colors.primary} />
+                </View>
+                <Text style={styles.gridCardText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
             <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
@@ -87,6 +40,8 @@ export default function DashboardScreen({ user, onLogout, onNavigate, onSelectPa
     { key: 'questionnaire', label: 'Questionnaire', icon: 'clipboard-outline' },
     { key: 'activities', label: 'Cognitive Activities', icon: 'game-controller-outline' },
     { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
+    { key: 'sleepLog', label: 'Sleep Log', icon: 'moon-outline' },
+    { key: 'weightLog', label: 'Weight Log', icon: 'scale-outline' },
   ];
 
   return (
@@ -132,7 +87,6 @@ const styles = StyleSheet.create({
   headerTitle: { includeFontPadding: false, textAlignVertical: 'center' },
   headerSubtitle: { marginTop: 2, includeFontPadding: false, textAlignVertical: 'center' },
   body: { flex: 1, padding: spacing.md },
-  sectionSpacing: { marginBottom: spacing.sm },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -164,25 +118,4 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
   },
   logoutButtonText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
-  emptyText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
-  list: { flex: 1, marginBottom: spacing.sm },
-  listCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
-    ...shadow,
-  },
-  listCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  dateText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 });

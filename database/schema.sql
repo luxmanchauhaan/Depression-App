@@ -146,3 +146,29 @@ CREATE TABLE cognitive_results (
   KEY patient_id (patient_id),
   CONSTRAINT cognitive_results_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
 )
+
+
+
+
+CREATE TABLE sleep_logs (
+  id INT NOT NULL AUTO_INCREMENT,
+  patient_id INT NOT NULL,
+  hours_slept DECIMAL(3,1) NOT NULL,
+  quality ENUM('poor', 'fair', 'good') NOT NULL,
+  logged_date DATE NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY patient_id (patient_id),
+  CONSTRAINT sleep_logs_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE weight_logs (
+  id INT NOT NULL AUTO_INCREMENT,
+  patient_id INT NOT NULL,
+  weight_kg DECIMAL(5,2) NOT NULL,
+  logged_date DATE NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY patient_id (patient_id),
+  CONSTRAINT weight_logs_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

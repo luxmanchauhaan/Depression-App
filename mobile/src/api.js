@@ -100,3 +100,27 @@ export function getPatientCognitiveHistory(token, patientId) {
 export function getPatientBdiHistory(token, patientId) {
   return authGet(`/api/doctor/patients/${patientId}/bdi-history`, token);
 }
+
+export function submitSleepLog(token, hoursSlept, quality) {
+  return authRequest('/api/logs/sleep', { hours_slept: hoursSlept, quality }, token);
+}
+
+export function getSleepHistory(token) {
+  return authGet('/api/logs/sleep', token);
+}
+
+export function getPatientSleepHistory(token, patientId) {
+  return authGet(`/api/doctor/patients/${patientId}/sleep-history`, token);
+}
+
+export function submitWeightLog(token, weightKg) {
+  return authRequest('/api/logs/weight', { weight_kg: weightKg }, token);
+}
+
+export function getWeightHistory(token) {
+  return authGet('/api/logs/weight', token);
+}
+
+export function getPatientWeightHistory(token, patientId) {
+  return authGet(`/api/doctor/patients/${patientId}/weight-history`, token);
+}

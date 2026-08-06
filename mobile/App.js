@@ -19,6 +19,9 @@ import ExecutiveFunctionTestScreen from './src/screens/ExecutiveFunctionTestScre
 import TestHistoryDetailScreen from './src/screens/TestHistoryDetailScreen';
 import MyHistoryScreen from './src/screens/MyHistoryScreen';
 import MyTestHistoryDetailScreen from './src/screens/MyTestHistoryDetailScreen';
+import SleepLogScreen from './src/screens/SleepLogScreen';
+import WeightLogScreen from './src/screens/WeightLogScreen';
+import PatientListScreen from './src/screens/PatientListScreen';
 
 export default function App() {
   const [screen, setScreen] = useState('landing');
@@ -64,6 +67,12 @@ export default function App() {
           <DashboardScreen
             user={user}
             onLogout={handleLogout}
+            onNavigate={setScreen}
+          />
+        )}
+        {screen === 'patientList' && user && (
+          <PatientListScreen
+            token={user.token}
             onNavigate={setScreen}
             onSelectPatient={handleSelectPatient}
           />
@@ -118,6 +127,12 @@ export default function App() {
             category={selectedMyCategory}
             onNavigate={setScreen}
           />
+        )}
+        {screen === 'sleepLog' && user && (
+          <SleepLogScreen token={user.token} onNavigate={setScreen} />
+        )}
+        {screen === 'weightLog' && user && (
+          <WeightLogScreen token={user.token} onNavigate={setScreen} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>
