@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, BackHandler } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -24,115 +24,124 @@ import WeightLogScreen from './src/screens/WeightLogScreen';
 import PatientListScreen from './src/screens/PatientListScreen';
 
 export default function App() {
-  const [screen, setScreen] = useState('landing');
-  const [user, setUser] = useState(null); // { token, role, fullName }
+  const [screenStack, setScreenStack] = useState(['landing']);
+  const screen = screenStack[screenStack.length - 1];
+
+  const [user, setUser] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedMyCategory, setSelectedMyCategory] = useState(null);
 
+  const navigate = useCallback((next) => {
+    setScreenStack((prev) => [...prev, next]);
+  }, []);
+
+  const goBack = useCallback(() => {
+    setScreenStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
+
+  const resetTo = useCallback((next) => {
+    setScreenStack([next]);
+  }, []);
+
+  // Hardware / gesture back: on the main dashboard (or the landing screen,
+  // before login) this exits the app. On any other screen, it goes back one
+  // step. Uses a ref for the current screen name so the listener only needs
+  // to be registered ONCE, avoiding stale duplicate listeners from Fast Refresh.
+  const screenRef = useRef(screen);
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const current = screenRef.current;
+      if (current === 'landing' || current === 'dashboard') {
+        return false; // let the OS exit the app
+      }
+      goBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [goBack]);
+
   function handleAuth(authResult) {
     setUser(authResult);
-    setScreen('dashboard');
+    resetTo('dashboard');
   }
 
   function handleLogout() {
     setUser(null);
-    setScreen('landing');
+    resetTo('landing');
   }
 
   function handleSelectPatient(patient) {
     setSelectedPatient(patient);
-    setScreen('patientDetail');
+    navigate('patientDetail');
   }
 
   function handleSelectCategory(category) {
     setSelectedCategory(category);
-    setScreen('testHistoryDetail');
+    navigate('testHistoryDetail');
   }
 
   function handleSelectMyCategory(category) {
     setSelectedMyCategory(category);
-    setScreen('myTestHistoryDetail');
+    navigate('myTestHistoryDetail');
   }
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="auto" />
-        {screen === 'landing' && <LandingScreen onNavigate={setScreen} />}
-        {screen === 'doctorSignup' && <DoctorSignupScreen onNavigate={setScreen} onAuth={handleAuth} />}
-        {screen === 'patientSignup' && <PatientSignupScreen onNavigate={setScreen} onAuth={handleAuth} />}
-        {screen === 'login' && <LoginScreen onNavigate={setScreen} onAuth={handleAuth} />}
+        {screen === 'landing' && <LandingScreen onNavigate={navigate} />}
+        {screen === 'doctorSignup' && <DoctorSignupScreen onNavigate={navigate} onBack={goBack} onAuth={handleAuth} />}
+        {screen === 'patientSignup' && <PatientSignupScreen onNavigate={navigate} onBack={goBack} onAuth={handleAuth} />}
+        {screen === 'login' && <LoginScreen onNavigate={navigate} onBack={goBack} onAuth={handleAuth} />}
         {screen === 'dashboard' && user && (
-          <DashboardScreen
-            user={user}
-            onLogout={handleLogout}
-            onNavigate={setScreen}
-          />
+          <DashboardScreen user={user} onLogout={handleLogout} onNavigate={navigate} />
         )}
         {screen === 'patientList' && user && (
-          <PatientListScreen
-            token={user.token}
-            onNavigate={setScreen}
-            onSelectPatient={handleSelectPatient}
-          />
+          <PatientListScreen token={user.token} onNavigate={navigate} onBack={goBack} onSelectPatient={handleSelectPatient} />
         )}
         {screen === 'questionnaire' && user && (
-          <QuestionnaireScreen
-            token={user.token}
-            onNavigate={setScreen}
-            onSubmitted={() => setScreen('dashboard')}
-          />
+          <QuestionnaireScreen token={user.token} onNavigate={navigate} onBack={goBack} onSubmitted={goBack} />
         )}
         {screen === 'activities' && user && (
-          <ActivityScreen token={user.token} onNavigate={setScreen} />
+          <ActivityScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'memoryTest' && user && (
-          <MemoryTestScreen token={user.token} onNavigate={setScreen} />
+          <MemoryTestScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'attentionTest' && user && (
-          <AttentionTestScreen token={user.token} onNavigate={setScreen} />
+          <AttentionTestScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'visualMemoryTest' && user && (
-          <VisualMemoryTestScreen token={user.token} onNavigate={setScreen} />
+          <VisualMemoryTestScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'patientDetail' && user && selectedPatient && (
-          <PatientDetailScreen
-            token={user.token}
-            patient={selectedPatient}
-            onNavigate={setScreen}
-            onSelectCategory={handleSelectCategory}
-          />
+          <PatientDetailScreen token={user.token} patient={selectedPatient} onNavigate={navigate} onBack={goBack} onSelectCategory={handleSelectCategory} />
         )}
         {screen === 'processingSpeedTest' && user && (
-          <ProcessingSpeedTestScreen token={user.token} onNavigate={setScreen} />
+          <ProcessingSpeedTestScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'executiveFunctionTest' && user && (
-          <ExecutiveFunctionTestScreen token={user.token} onNavigate={setScreen} />
+          <ExecutiveFunctionTestScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'testHistoryDetail' && user && selectedPatient && selectedCategory && (
-          <TestHistoryDetailScreen
-            token={user.token}
-            patient={selectedPatient}
-            category={selectedCategory}
-            onNavigate={setScreen}
-          />
+          <TestHistoryDetailScreen token={user.token} patient={selectedPatient} category={selectedCategory} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'myHistory' && user && (
-          <MyHistoryScreen onNavigate={setScreen} onSelectCategory={handleSelectMyCategory} />
+          <MyHistoryScreen onNavigate={navigate} onBack={goBack} onSelectCategory={handleSelectMyCategory} />
         )}
         {screen === 'myTestHistoryDetail' && user && selectedMyCategory && (
-          <MyTestHistoryDetailScreen
-            token={user.token}
-            category={selectedMyCategory}
-            onNavigate={setScreen}
-          />
+          <MyTestHistoryDetailScreen token={user.token} category={selectedMyCategory} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'sleepLog' && user && (
-          <SleepLogScreen token={user.token} onNavigate={setScreen} />
+          <SleepLogScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
         {screen === 'weightLog' && user && (
-          <WeightLogScreen token={user.token} onNavigate={setScreen} />
+          <WeightLogScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>

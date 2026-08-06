@@ -23,6 +23,15 @@ const ICONS = {
   executive_function: 'flash-outline',
 };
 
+// Chart-kit renders every label with no built-in "skip some" logic, so with
+// many data points the dates collide. This keeps only every Nth label and
+// blanks the rest, while every data point still plots correctly.
+function thinLabels(labels, maxVisible = 6) {
+  if (labels.length <= maxVisible) return labels;
+  const step = Math.ceil(labels.length / maxVisible);
+  return labels.map((label, i) => (i % step === 0 ? label : ''));
+}
+
 export default function MyTestHistoryDetailScreen({ token, category, onNavigate }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,10 +75,12 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
 
   const span = daysSpan();
 
+  const rawLabels = chronological.map((item) =>
+    new Date(item.taken_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  );
+
   const chartData = {
-    labels: chronological.map((item) =>
-      new Date(item.taken_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    ),
+    labels: thinLabels(rawLabels, 6),
     datasets: [{ data: chronological.map((item) => getScore(item)) }],
   };
 
@@ -115,6 +126,7 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
                     width={screenWidth}
                     height={200}
                     withInnerLines={false}
+                    verticalLabelRotation={45}
                     chartConfig={{
                       backgroundColor: colors.surface,
                       backgroundGradientFrom: colors.surface,
