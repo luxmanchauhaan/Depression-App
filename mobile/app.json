@@ -8,7 +8,9 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "permissions": ["SCHEDULE_EXACT_ALARM"]
+    },
     "plugins": [
       "expo-status-bar"
     ]

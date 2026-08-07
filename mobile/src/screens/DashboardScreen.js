@@ -42,6 +42,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
     { key: 'sleepLog', label: 'Sleep Log', icon: 'moon-outline' },
     { key: 'weightLog', label: 'Weight Log', icon: 'scale-outline' },
+    { key: 'medicineReminders', label: 'Medicine Reminders', icon: 'medkit-outline' },
   ];
 
   return (

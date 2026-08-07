@@ -61,6 +61,34 @@ async function authPatch(path, token) {
   return data;
 }
 
+async function authDelete(path, token) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || data.message || 'Something went wrong');
+  }
+  return data;
+}
+
+async function authPatchBody(path, body, token) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || data.message || 'Something went wrong');
+  }
+  return data;
+}
+
 export function signupDoctor(payload) {
   return request('/api/auth/signup/doctor', payload);
 }
@@ -123,4 +151,28 @@ export function getWeightHistory(token) {
 
 export function getPatientWeightHistory(token, patientId) {
   return authGet(`/api/doctor/patients/${patientId}/weight-history`, token);
+}
+
+export function createMedicine(token, name, dosage, times) {
+  return authRequest('/api/medicines', { name, dosage, times }, token);
+}
+
+export function getMedicines(token) {
+  return authGet('/api/medicines', token);
+}
+
+export function deactivateMedicine(token, medicineId) {
+  return authDelete(`/api/medicines/${medicineId}`, token);
+}
+
+export function getTodayDoses(token) {
+  return authGet('/api/medicines/today', token);
+}
+
+export function updateDoseStatus(token, logId, status) {
+  return authPatchBody(`/api/medicines/logs/${logId}`, { status }, token);
+}
+
+export function getMedicineHistory(token) {
+  return authGet('/api/medicines/history', token);
 }

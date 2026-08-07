@@ -22,6 +22,7 @@ import MyTestHistoryDetailScreen from './src/screens/MyTestHistoryDetailScreen';
 import SleepLogScreen from './src/screens/SleepLogScreen';
 import WeightLogScreen from './src/screens/WeightLogScreen';
 import PatientListScreen from './src/screens/PatientListScreen';
+import MedicineScreen from './src/screens/MedicineScreen';
 
 export default function App() {
   const [screenStack, setScreenStack] = useState(['landing']);
@@ -44,10 +45,6 @@ export default function App() {
     setScreenStack([next]);
   }, []);
 
-  // Hardware / gesture back: on the main dashboard (or the landing screen,
-  // before login) this exits the app. On any other screen, it goes back one
-  // step. Uses a ref for the current screen name so the listener only needs
-  // to be registered ONCE, avoiding stale duplicate listeners from Fast Refresh.
   const screenRef = useRef(screen);
   useEffect(() => {
     screenRef.current = screen;
@@ -57,7 +54,7 @@ export default function App() {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       const current = screenRef.current;
       if (current === 'landing' || current === 'dashboard') {
-        return false; // let the OS exit the app
+        return false;
       }
       goBack();
       return true;
@@ -142,6 +139,9 @@ export default function App() {
         )}
         {screen === 'weightLog' && user && (
           <WeightLogScreen token={user.token} onNavigate={navigate} onBack={goBack} />
+        )}
+        {screen === 'medicineReminders' && user && (
+          <MedicineScreen token={user.token} onNavigate={navigate} onBack={goBack} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>
