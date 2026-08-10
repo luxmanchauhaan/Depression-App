@@ -153,8 +153,8 @@ export function getPatientWeightHistory(token, patientId) {
   return authGet(`/api/doctor/patients/${patientId}/weight-history`, token);
 }
 
-export function createMedicine(token, name, dosage, times) {
-  return authRequest('/api/medicines', { name, dosage, times }, token);
+export function createMedicine(token, name, dosage, times, notificationIds) {
+  return authRequest('/api/medicines', { name, dosage, times, notification_ids: notificationIds }, token);
 }
 
 export function getMedicines(token) {

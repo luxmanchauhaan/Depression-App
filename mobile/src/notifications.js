@@ -28,8 +28,6 @@ export async function requestNotificationPermission() {
   return finalStatus === 'granted';
 }
 
-// Schedules one repeating daily notification per time (e.g. "08:00") for a medicine.
-// Returns an array of { time, notificationId } so they can be cancelled later.
 export async function scheduleMedicineNotifications(medicineName, dosage, times) {
   const scheduled = [];
 

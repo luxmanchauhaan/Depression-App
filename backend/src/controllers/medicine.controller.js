@@ -4,10 +4,9 @@ function todayDateOnly() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// POST /api/medicines - create a new medicine schedule
 exports.createMedicine = async (req, res) => {
   try {
-    const { name, dosage, times } = req.body;
+    const { name, dosage, times, notification_ids } = req.body;
 
     if (!name || !Array.isArray(times) || times.length === 0) {
       return res.status(400).json({ message: 'name and at least one time are required.' });
@@ -23,6 +22,7 @@ exports.createMedicine = async (req, res) => {
       name,
       dosage: dosage || null,
       times_json: times,
+      notification_ids_json: notification_ids || null,
     });
 
     res.json({ medicine });
@@ -32,7 +32,6 @@ exports.createMedicine = async (req, res) => {
   }
 };
 
-// GET /api/medicines - list all active medicines for the logged-in patient
 exports.getMedicines = async (req, res) => {
   try {
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });
@@ -52,7 +51,6 @@ exports.getMedicines = async (req, res) => {
   }
 };
 
-// DELETE /api/medicines/:id - deactivate a medicine (soft delete)
 exports.deactivateMedicine = async (req, res) => {
   try {
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });
@@ -78,7 +76,6 @@ exports.deactivateMedicine = async (req, res) => {
   }
 };
 
-// GET /api/medicines/today - get today's doses, creating pending logs if they don't exist yet
 exports.getTodayDoses = async (req, res) => {
   try {
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });
@@ -93,7 +90,7 @@ exports.getTodayDoses = async (req, res) => {
 
     for (const med of medicines) {
       for (const time of med.times_json) {
-        const [existing] = await MedicineLog.findOrCreate({
+        await MedicineLog.findOrCreate({
           where: { medicine_id: med.id, scheduled_date: today, scheduled_time: time },
           defaults: { patient_id: patient.id, status: 'pending' },
         });
@@ -113,7 +110,6 @@ exports.getTodayDoses = async (req, res) => {
   }
 };
 
-// PATCH /api/medicines/logs/:id - mark a dose taken or missed
 exports.updateDoseStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -145,7 +141,6 @@ exports.updateDoseStatus = async (req, res) => {
   }
 };
 
-// GET /api/medicines/history - adherence history (last 30 days)
 exports.getAdherenceHistory = async (req, res) => {
   try {
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });

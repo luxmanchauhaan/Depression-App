@@ -5,8 +5,8 @@ const Medicine = sequelize.define('Medicine', {
   name: { type: DataTypes.STRING(150), allowNull: false },
   dosage: { type: DataTypes.STRING(100) },
   times_json: { type: DataTypes.JSON, allowNull: false },
-  active: { type: DataTypes.BOOLEAN, defaultValue: true },
   notification_ids_json: { type: DataTypes.JSON, defaultValue: null },
+  active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
   tableName: 'medicines',
   underscored: true,
