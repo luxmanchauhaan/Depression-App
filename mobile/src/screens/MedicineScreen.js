@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createMedicine, getMedicines, deactivateMedicine, getTodayDoses, updateDoseStatus } from '../api';
-import { requestNotificationPermission, scheduleMedicineNotifications, cancelMedicineNotifications } from '../notifications';
 import { colors, spacing, radius, shadow } from '../theme';
 
 const THEME = { bg: '#FDE0E0', icon: '#E07A7A' };
@@ -20,7 +19,6 @@ export default function MedicineScreen({ token, onNavigate, onBack }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    requestNotificationPermission();
     loadAll();
   }, []);
 
@@ -65,20 +63,7 @@ export default function MedicineScreen({ token, onNavigate, onBack }) {
 
     setSubmitting(true);
     try {
-      const granted = await requestNotificationPermission();
-      let notificationIds = [];
-
-      if (granted) {
-        const scheduled = await scheduleMedicineNotifications(name.trim(), dosage.trim() || null, times);
-        notificationIds = scheduled.map((s) => s.notificationId);
-      } else {
-        Alert.alert(
-          'Notifications disabled',
-          'The medicine will be saved, but reminders won\'t alert you unless notifications are enabled in your phone settings.'
-        );
-      }
-
-      await createMedicine(token, name.trim(), dosage.trim() || null, times, notificationIds);
+      await createMedicine(token, name.trim(), dosage.trim() || null, times);
       setName('');
       setDosage('');
       setTimes([]);
@@ -99,10 +84,6 @@ export default function MedicineScreen({ token, onNavigate, onBack }) {
         style: 'destructive',
         onPress: async () => {
           try {
-            const med = medicines.find((m) => m.id === id);
-            if (med?.notification_ids_json?.length) {
-              await cancelMedicineNotifications(med.notification_ids_json);
-            }
             await deactivateMedicine(token, id);
             await loadAll();
           } catch (err) {
