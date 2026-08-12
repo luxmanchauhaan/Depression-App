@@ -22,7 +22,7 @@ function getSeverityStyle(severity) {
 export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) {
   const [answers, setAnswers] = useState({}); // { itemId: value }
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null); // { total_score, severity } | null
+  const [result, setResult] = useState(null); // { total_score, severity, recommendations } | null
 
   const answeredCount = Object.keys(answers).length;
 
@@ -58,6 +58,7 @@ export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) 
   }
 
   const severityStyle = result ? getSeverityStyle(result.severity) : null;
+  const specific = result?.recommendations;
 
   return (
     <View style={styles.container}>
@@ -122,32 +123,59 @@ export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) 
       <Modal visible={!!result} transparent animationType="fade" onRequestClose={handleResultClose}>
         <View style={styles.overlay}>
           <View style={styles.resultCard}>
-            {severityStyle && (
-              <View style={[styles.resultIconWrap, { backgroundColor: severityStyle.bg }]}>
-                <Ionicons name={severityStyle.icon} size={32} color={severityStyle.color} />
-              </View>
-            )}
-            <Text style={styles.resultTitle}>Submitted</Text>
-
-            {result && (
-              <View style={[styles.scoreRow, { backgroundColor: severityStyle.bg }]}>
-                <View>
-                  <Text style={styles.scoreLabel}>Total score</Text>
-                  <Text style={[styles.scoreValue, { color: severityStyle.color }]}>{result.total_score}</Text>
+            <ScrollView contentContainerStyle={{ alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+              {severityStyle && (
+                <View style={[styles.resultIconWrap, { backgroundColor: severityStyle.bg }]}>
+                  <Ionicons name={severityStyle.icon} size={32} color={severityStyle.color} />
                 </View>
-                <View style={styles.scoreDivider} />
-                <View>
-                  <Text style={styles.scoreLabel}>Severity</Text>
-                  <Text style={[styles.severityValue, { color: severityStyle.color }]}>
-                    {result.severity}
-                  </Text>
-                </View>
-              </View>
-            )}
+              )}
+              <Text style={styles.resultTitle}>Submitted</Text>
 
-            <TouchableOpacity style={styles.resultButton} onPress={handleResultClose} activeOpacity={0.85}>
-              <Text style={styles.resultButtonText}>OK</Text>
-            </TouchableOpacity>
+              {result && (
+                <View style={[styles.scoreRow, { backgroundColor: severityStyle.bg }]}>
+                  <View>
+                    <Text style={styles.scoreLabel}>Total score</Text>
+                    <Text style={[styles.scoreValue, { color: severityStyle.color }]}>{result.total_score}</Text>
+                  </View>
+                  <View style={styles.scoreDivider} />
+                  <View>
+                    <Text style={styles.scoreLabel}>Severity</Text>
+                    <Text style={[styles.severityValue, { color: severityStyle.color }]}>
+                      {result.severity}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {specific?.urgent && (
+                <View style={[styles.urgentCard, { backgroundColor: severityStyle.bg, borderColor: severityStyle.color }]}>
+                  <Ionicons name="medkit" size={20} color={severityStyle.color} style={{ marginRight: 8 }} />
+                  <Text style={[styles.urgentText, { color: severityStyle.color }]}>{specific.urgent}</Text>
+                </View>
+              )}
+
+              {specific && (
+                <View style={styles.recoSection}>
+                  <Text style={[styles.recoTitle, { color: severityStyle.color }]}>{specific.title}</Text>
+                  {specific.points.map((point, i) => (
+                    <View key={i} style={styles.recoRow}>
+                      <View style={[styles.recoDot, { backgroundColor: severityStyle.color }]} />
+                      <Text style={styles.recoText}>{point}</Text>
+                    </View>
+                  ))}
+                  {specific.note && (
+                    <View style={[styles.recoNote, { backgroundColor: severityStyle.bg }]}>
+                      <Ionicons name="information-circle-outline" size={16} color={severityStyle.color} style={{ marginRight: 6 }} />
+                      <Text style={[styles.recoNoteText, { color: severityStyle.color }]}>{specific.note}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.resultButton} onPress={handleResultClose} activeOpacity={0.85}>
+                <Text style={styles.resultButtonText}>OK</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -238,10 +266,10 @@ const styles = StyleSheet.create({
   resultCard: {
     width: '100%',
     maxWidth: 360,
+    maxHeight: '85%',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    alignItems: 'center',
     ...shadow,
   },
   resultIconWrap: {
@@ -271,6 +299,24 @@ const styles = StyleSheet.create({
   scoreLabel: { fontSize: 12, color: colors.textMuted, marginBottom: 2, textAlign: 'center' },
   scoreValue: { fontSize: 26, fontWeight: '700', textAlign: 'center' },
   severityValue: { fontSize: 18, fontWeight: '700', textAlign: 'center', textTransform: 'capitalize' },
+  urgentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  urgentText: { fontSize: 14, fontWeight: '700', flex: 1, lineHeight: 19 },
+  recoSection: { width: '100%', marginBottom: spacing.md },
+  recoTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
+  recoRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
+  recoDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6, marginRight: 8 },
+  recoDotMuted: { width: 6, height: 6, borderRadius: 3, marginTop: 6, marginRight: 8, backgroundColor: colors.textMuted },
+  recoText: { fontSize: 13, color: colors.text, flex: 1, lineHeight: 18 },
+  recoNote: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: radius.sm, padding: spacing.sm, marginTop: 4 },
+  recoNoteText: { fontSize: 12, flex: 1, lineHeight: 16, fontWeight: '500' },
   resultButton: {
     width: '100%',
     backgroundColor: colors.primary,
@@ -278,6 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: spacing.xs,
   },
   resultButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

@@ -8,6 +8,7 @@ const BdiResponse = sequelize.define('BdiResponse', {
     type: DataTypes.ENUM('minimal', 'mild', 'moderate', 'severe'),
     allowNull: false,
   },
+  recommendations_json: { type: DataTypes.JSON, defaultValue: null },
   taken_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, {
   tableName: 'bdi_responses',

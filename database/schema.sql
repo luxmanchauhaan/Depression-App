@@ -172,3 +172,7 @@ CREATE TABLE weight_logs (
   KEY patient_id (patient_id),
   CONSTRAINT weight_logs_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+ALTER TABLE medicines ADD COLUMN notification_ids_json JSON DEFAULT NULL;
+ALTER TABLE bdi_responses ADD COLUMN recommendations_json JSON DEFAULT NULL;
