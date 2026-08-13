@@ -1,4 +1,4 @@
-const { BdiResponse, Patient } = require('../models');
+const { BdiResponse, Patient, CognitiveResult, SleepLog, WeightLog } = require('../models');
 
 function getSeverity(totalScore) {
   if (totalScore <= 13) return 'minimal';
@@ -139,5 +139,47 @@ exports.getRecommendations = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching recommendations.' });
+  }
+};
+
+exports.getDashboardSummary = async (req, res) => {
+  try {
+    const patient = await Patient.findOne({ where: { user_id: req.user.id } });
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient record not found for this user.' });
+    }
+
+    const bdiHistory = await BdiResponse.findAll({
+      where: { patient_id: patient.id },
+      order: [['taken_at', 'DESC']],
+      limit: 10,
+      attributes: ['id', 'total_score', 'severity', 'taken_at'],
+    });
+
+    const latestCognitive = await CognitiveResult.findOne({
+      where: { patient_id: patient.id },
+      order: [['taken_at', 'DESC']],
+    });
+
+    const latestSleep = await SleepLog.findOne({
+      where: { patient_id: patient.id },
+      order: [['logged_date', 'DESC']],
+    });
+
+    const latestWeight = await WeightLog.findOne({
+      where: { patient_id: patient.id },
+      order: [['logged_date', 'DESC']],
+    });
+
+    res.json({
+      bdi_history: bdiHistory.reverse(),
+      latest_bdi: bdiHistory[0] || null,
+      latest_cognitive: latestCognitive,
+      latest_sleep: latestSleep,
+      latest_weight: latestWeight,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching dashboard summary.' });
   }
 };

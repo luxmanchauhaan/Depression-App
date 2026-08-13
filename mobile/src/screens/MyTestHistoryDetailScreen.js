@@ -23,15 +23,6 @@ const ICONS = {
   executive_function: 'flash-outline',
 };
 
-// Chart-kit renders every label with no built-in "skip some" logic, so with
-// many data points the dates collide. This keeps only every Nth label and
-// blanks the rest, while every data point still plots correctly.
-function thinLabels(labels, maxVisible = 6) {
-  if (labels.length <= maxVisible) return labels;
-  const step = Math.ceil(labels.length / maxVisible);
-  return labels.map((label, i) => (i % step === 0 ? label : ''));
-}
-
 export default function MyTestHistoryDetailScreen({ token, category, onNavigate }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,12 +66,17 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
 
   const span = daysSpan();
 
-  const rawLabels = chronological.map((item) =>
-    new Date(item.taken_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  );
+  let monthLabel = '';
+  if (chronological.length > 0) {
+    const firstDate = new Date(chronological[0].taken_at);
+    const lastDate = new Date(chronological[chronological.length - 1].taken_at);
+    const firstMonth = firstDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const lastMonth = lastDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    monthLabel = firstMonth === lastMonth ? firstMonth : `${firstDate.toLocaleDateString(undefined, { month: 'short' })} \u2013 ${lastMonth}`;
+  }
 
   const chartData = {
-    labels: thinLabels(rawLabels, 6),
+    labels: chronological.map((item) => String(new Date(item.taken_at).getDate())),
     datasets: [{ data: chronological.map((item) => getScore(item)) }],
   };
 
@@ -99,10 +95,7 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
         {loading ? (
           <ActivityIndicator style={{ marginTop: 20 }} color={c.icon} />
         ) : entries.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="document-text-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No records yet.</Text>
-          </View>
+          <Text style={styles.emptyText}>No records yet.</Text>
         ) : (
           <>
             {entries.length === 1 && (
@@ -118,15 +111,15 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
               <View style={styles.chartCard}>
                 <Text style={styles.chartCaption}>
                   Last {span} day{span !== 1 ? 's' : ''}
-                  {category === 'processing_speed' ? ' · lower is faster' : ''}
+                  {category === 'processing_speed' ? ' \u00b7 lower is faster' : ''}
                 </Text>
+                <Text style={styles.monthLabel}>{monthLabel}</Text>
                 <View>
                   <LineChart
                     data={chartData}
                     width={screenWidth}
                     height={200}
                     withInnerLines={false}
-                    verticalLabelRotation={45}
                     chartConfig={{
                       backgroundColor: colors.surface,
                       backgroundGradientFrom: colors.surface,
@@ -135,6 +128,7 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
                       color: (opacity = 1) => c.icon,
                       labelColor: (opacity = 1) => colors.textMuted,
                       propsForDots: { r: '5', strokeWidth: '2', stroke: c.icon, fill: colors.surface },
+                      propsForLabels: { fontSize: 11 },
                     }}
                     bezier
                     style={{ borderRadius: radius.md, marginLeft: -spacing.sm }}
@@ -150,7 +144,10 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
                     </View>
                   )}
                 </View>
-                <Text style={styles.tapHint}>Tap a point to see date and score</Text>
+                <View style={[styles.captionBadge, { backgroundColor: c.bg }]}>
+                  <Ionicons name="hand-left-outline" size={14} color={c.icon} style={{ marginRight: 6 }} />
+                  <Text style={[styles.captionBadgeText, { color: c.icon }]}>Tap a point to see date and score</Text>
+                </View>
               </View>
             )}
 
@@ -187,55 +184,32 @@ export default function MyTestHistoryDetailScreen({ token, category, onNavigate 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
-    paddingTop: 70,
-    paddingBottom: 24,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
+    paddingTop: 70, paddingBottom: 24, paddingHorizontal: spacing.md, alignItems: 'center',
+    borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg,
   },
-  headerIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
+  headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
   body: { padding: spacing.md },
-  emptyCard: { alignItems: 'center', padding: spacing.lg, backgroundColor: colors.surface, borderRadius: radius.md, ...shadow },
-  emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8 },
-  hintCard: {
+  emptyText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: 12 },
+  hintCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, ...shadow },
+  hintText: { fontSize: 13, fontWeight: '500', flex: 1 },
+  chartCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, ...shadow },
+  chartCaption: { fontSize: 13, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  monthLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textAlign: 'center', marginBottom: spacing.xs },
+  captionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-    ...shadow,
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xs,
+    alignSelf: 'center',
   },
-  hintText: { fontSize: 13, fontWeight: '500', flex: 1 },
-  chartCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-    ...shadow,
-  },
-  chartCaption: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4, textAlign: 'center' },
-  tapHint: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 4 },
+  captionBadgeText: { fontSize: 11, fontWeight: '600' },
   tooltip: { position: 'absolute', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8 },
   tooltipText: { color: '#fff', fontSize: 11 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
-    ...shadow,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs, ...shadow },
   rowDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
   rowScore: { fontSize: 15, fontWeight: '600', color: colors.text },
   rowDate: { fontSize: 12, color: colors.textMuted, marginTop: 2 },

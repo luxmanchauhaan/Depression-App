@@ -83,10 +83,17 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
 
   const span = daysSpan();
 
+  let monthLabel = '';
+  if (chronological.length > 0) {
+    const firstDate = new Date(getDate(chronological[0]));
+    const lastDate = new Date(getDate(chronological[chronological.length - 1]));
+    const firstMonth = firstDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const lastMonth = lastDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    monthLabel = firstMonth === lastMonth ? firstMonth : `${firstDate.toLocaleDateString(undefined, { month: 'short' })} \u2013 ${lastMonth}`;
+  }
+
   const chartData = {
-    labels: chronological.map((item) =>
-      new Date(getDate(item)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    ),
+    labels: chronological.map((item) => String(new Date(getDate(item)).getDate())),
     datasets: [{ data: chronological.map((item) => getScore(item)) }],
   };
 
@@ -125,8 +132,9 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
               <View style={styles.chartCard}>
                 <Text style={styles.chartCaption}>
                   Last {span} day{span !== 1 ? 's' : ''}
-                  {category === 'processing_speed' ? ' · lower is faster' : ''}
+                  {category === 'processing_speed' ? ' \u00b7 lower is faster' : ''}
                 </Text>
+                <Text style={styles.monthLabel}>{monthLabel}</Text>
                 <View>
                   <LineChart
                     data={chartData}
@@ -141,6 +149,7 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
                       color: (opacity = 1) => c.icon,
                       labelColor: (opacity = 1) => colors.textMuted,
                       propsForDots: { r: '5', strokeWidth: '2', stroke: c.icon, fill: colors.surface },
+                      propsForLabels: { fontSize: 11 },
                     }}
                     bezier
                     style={{ borderRadius: radius.md, marginLeft: -spacing.sm }}
@@ -156,7 +165,10 @@ export default function TestHistoryDetailScreen({ token, patient, category, onNa
                     </View>
                   )}
                 </View>
-                <Text style={styles.tapHint}>Tap a point to see date and score</Text>
+                <View style={[styles.captionBadge, { backgroundColor: c.bg }]}>
+                  <Ionicons name="hand-left-outline" size={14} color={c.icon} style={{ marginRight: 6 }} />
+                  <Text style={[styles.captionBadgeText, { color: c.icon }]}>Tap a point to see date and score</Text>
+                </View>
               </View>
             )}
 
@@ -234,8 +246,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadow,
   },
-  chartCaption: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4, textAlign: 'center' },
-  tapHint: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 4 },
+  chartCaption: { fontSize: 13, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  monthLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textAlign: 'center', marginBottom: spacing.xs },
+  captionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xs,
+    alignSelf: 'center',
+  },
+  captionBadgeText: { fontSize: 11, fontWeight: '600' },
   tooltip: { position: 'absolute', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8 },
   tooltipText: { color: '#fff', fontSize: 11 },
   row: {

@@ -176,3 +176,7 @@ export function updateDoseStatus(token, logId, status) {
 export function getMedicineHistory(token) {
   return authGet('/api/medicines/history', token);
 }
+
+export function getDashboardSummary(token) {
+  return authGet('/api/patient/summary', token);
+}
