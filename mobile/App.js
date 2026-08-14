@@ -23,6 +23,7 @@ import SleepLogScreen from './src/screens/SleepLogScreen';
 import WeightLogScreen from './src/screens/WeightLogScreen';
 import PatientListScreen from './src/screens/PatientListScreen';
 import MedicineScreen from './src/screens/MedicineScreen';
+import MoodCheckInScreen from './src/screens/MoodCheckInScreen';
 
 export default function App() {
   const [screenStack, setScreenStack] = useState(['landing']);
@@ -103,6 +104,9 @@ export default function App() {
         )}
         {screen === 'questionnaire' && user && (
           <QuestionnaireScreen token={user.token} onNavigate={navigate} onBack={goBack} onSubmitted={goBack} />
+        )}
+        {screen === 'moodCheckIn' && user && (
+          <MoodCheckInScreen token={user.token} onBack={goBack} onSubmitted={goBack} />
         )}
         {screen === 'activities' && user && (
           <ActivityScreen token={user.token} onNavigate={navigate} onBack={goBack} />

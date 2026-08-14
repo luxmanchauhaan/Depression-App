@@ -9,6 +9,8 @@ const SleepLog = require('./sleepLog.model');
 const WeightLog = require('./weightLog.model');
 const Medicine = require('./medicine.model');
 const MedicineLog = require('./medicineLog.model');
+const EmotionCapture = require('./emotionCapture.model');
+
 
 // User <-> Doctor (1:1)
 User.hasOne(Doctor, { foreignKey: 'user_id', onDelete: 'CASCADE' });
@@ -54,6 +56,15 @@ MedicineLog.belongsTo(Medicine, { foreignKey: 'medicine_id' });
 Patient.hasMany(MedicineLog, { foreignKey: 'patient_id', onDelete: 'CASCADE' });
 MedicineLog.belongsTo(Patient, { foreignKey: 'patient_id' });
 
+// Add this after your existing "Patient <-> MoodLog" association block:
+// Patient <-> EmotionCapture (1:many)
+Patient.hasMany(EmotionCapture, { foreignKey: 'patient_id', onDelete: 'CASCADE' });
+EmotionCapture.belongsTo(Patient, { foreignKey: 'patient_id' });
+
+// MoodLog <-> EmotionCapture (1:1, optional - only present if a photo was taken)
+MoodLog.hasOne(EmotionCapture, { foreignKey: 'mood_log_id' });
+EmotionCapture.belongsTo(MoodLog, { foreignKey: 'mood_log_id' });
+
 module.exports = {
   sequelize,
   User,
@@ -66,4 +77,5 @@ module.exports = {
   WeightLog,
   Medicine,
   MedicineLog,
+  EmotionCapture,
 };

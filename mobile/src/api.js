@@ -180,3 +180,7 @@ export function getMedicineHistory(token) {
 export function getDashboardSummary(token) {
   return authGet('/api/patient/summary', token);
 }
+
+export function submitMoodLog(token, payload) {
+  return request('/api/logs/mood', { body: payload, token });
+}

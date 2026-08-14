@@ -77,6 +77,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
   }
 
   const menuItems = [
+    { key: 'moodCheckIn', label: 'Mood Check-in', icon: 'happy-outline' },
     { key: 'questionnaire', label: 'Questionnaire', icon: 'clipboard-outline' },
     { key: 'activities', label: 'Cognitive Activities', icon: 'game-controller-outline' },
     { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
@@ -87,7 +88,9 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
 
   const fullBdiHistory = summary?.bdi_history || [];
   const bdiHistory = fullBdiHistory.slice(-6);
-  const screenWidth = Dimensions.get('window').width - (spacing.md * 2) - (spacing.sm * 2);
+  const CHART_HEIGHT = 180;
+  const Y_LABEL_WIDTH = 22;
+  const screenWidth = Dimensions.get('window').width - (spacing.md * 2) - (spacing.sm * 2) - Y_LABEL_WIDTH;
 
   // Month/year label shown once above the chart, since the x-axis now shows day numbers only.
   // If the visible points span more than one month, show a range instead of a single month.
@@ -97,7 +100,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     const lastDate = new Date(bdiHistory[bdiHistory.length - 1].taken_at);
     const firstMonth = firstDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
     const lastMonth = lastDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    monthLabel = firstMonth === lastMonth ? firstMonth : `${firstDate.toLocaleDateString(undefined, { month: 'short' })} \u2013 ${lastMonth}`;
+    monthLabel = firstMonth === lastMonth ? firstMonth : `${firstDate.toLocaleDateString(undefined, { month: 'short' })} – ${lastMonth}`;
   }
 
   const chartData = {
@@ -124,24 +127,30 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
               {bdiHistory.length >= 2 ? (
                 <>
                   <Text style={styles.monthLabel}>{monthLabel}</Text>
-                  <LineChart
-                    data={chartData}
-                    width={screenWidth}
-                    height={180}
-                    withInnerLines={false}
-                    chartConfig={{
-                      backgroundColor: colors.surface,
-                      backgroundGradientFrom: colors.surface,
-                      backgroundGradientTo: colors.surface,
-                      decimalPlaces: 0,
-                      color: () => colors.primary,
-                      labelColor: () => colors.textMuted,
-                      propsForDots: { r: '4', strokeWidth: '2', stroke: colors.primary, fill: colors.surface },
-                      propsForLabels: { fontSize: 11 },
-                    }}
-                    bezier
-                    style={{ borderRadius: radius.md, marginLeft: -spacing.md }}
-                  />
+                  <View style={styles.chartRow}>
+                    <View style={[styles.axisLabelYWrap, { height: CHART_HEIGHT }]}>
+                      <Text style={styles.axisLabelY}>Score</Text>
+                    </View>
+                    <LineChart
+                      data={chartData}
+                      width={screenWidth}
+                      height={CHART_HEIGHT}
+                      withInnerLines={false}
+                      chartConfig={{
+                        backgroundColor: colors.surface,
+                        backgroundGradientFrom: colors.surface,
+                        backgroundGradientTo: colors.surface,
+                        decimalPlaces: 0,
+                        color: () => colors.primary,
+                        labelColor: () => colors.textMuted,
+                        propsForDots: { r: '4', strokeWidth: '2', stroke: colors.primary, fill: colors.surface },
+                        propsForLabels: { fontSize: 11 },
+                      }}
+                      bezier
+                      style={{ borderRadius: radius.md }}
+                    />
+                  </View>
+                  <Text style={styles.axisLabelX}>Date of Assessment</Text>
                   <View style={styles.captionBadge}>
                     <Ionicons name="trending-down" size={14} color={colors.primaryDark} style={{ marginRight: 6 }} />
                     <Text style={styles.captionBadgeText}>BDI-II score trend — lower is better</Text>
@@ -249,6 +258,27 @@ const styles = StyleSheet.create({
   growthTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 2 },
   monthLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginBottom: spacing.xs },
   growthEmptyText: { fontSize: 13, color: colors.textMuted, paddingVertical: spacing.md, textAlign: 'center' },
+  chartRow: { flexDirection: 'row', alignItems: 'center' },
+  axisLabelYWrap: {
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  axisLabelY: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '600',
+    width: 60,
+    textAlign: 'center',
+    transform: [{ rotate: '-90deg' }],
+  },
+  axisLabelX: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 2,
+  },
   captionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
