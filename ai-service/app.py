@@ -8,14 +8,19 @@ FER2013). No training happens here - this only runs inference.
 This is intentionally the ONLY place in the whole app that uses AI/Python.
 Everything else (BDI-II scoring, recommendations, dashboards) is plain
 arithmetic in the Node backend.
+
+The Node backend calls this once per captured frame during a 30-second
+check-in and aggregates the results itself - this service has no concept
+of "sessions" or multiple frames, it only ever sees one image per call.
 """
 
 import base64
 import io
 import logging
+import os
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
@@ -26,13 +31,24 @@ logger = logging.getLogger("emotion-service")
 app = FastAPI(title="Emotion Detection Service")
 
 # Permissive CORS since this sits behind the Node backend, which is the only
-# thing that should be calling it directly in production (see auth note below).
+# thing that should be calling it directly in production (enforced below via
+# the shared-secret header, not by CORS - CORS alone doesn't stop server-to-
+# server or curl requests).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Shared secret the Node backend must send on every request. Set this via
+# environment variable in both services - do NOT hardcode it.
+INTERNAL_SERVICE_KEY = os.environ.get("EMOTION_SERVICE_KEY")
+if not INTERNAL_SERVICE_KEY:
+    logger.warning(
+        "EMOTION_SERVICE_KEY is not set - /analyze is currently UNPROTECTED. "
+        "Set this env var before deploying anywhere reachable off localhost."
+    )
 
 # Emotion labels the underlying model outputs, kept here so the API response
 # shape doesn't depend on DeepFace's internal naming if that ever changes.
@@ -60,13 +76,20 @@ class AnalyzeResponse(BaseModel):
     scores: EmotionScores
 
 
+def verify_internal_key(x_internal_key: str = Header(default=None)):
+    if INTERNAL_SERVICE_KEY and x_internal_key != INTERNAL_SERVICE_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)
-def analyze_emotion(payload: AnalyzeRequest):
+def analyze_emotion(payload: AnalyzeRequest, x_internal_key: str = Header(default=None)):
+    verify_internal_key(x_internal_key)
+
     # --- Decode the image ---
     try:
         image_bytes = base64.b64decode(payload.image_base64)
@@ -74,7 +97,11 @@ def analyze_emotion(payload: AnalyzeRequest):
     except Exception:
         raise HTTPException(status_code=400, detail="Could not decode image. Expected base64-encoded JPEG or PNG.")
 
-    image_array = np.array(image)
+    # DeepFace's pipeline is built around OpenCV (BGR), not PIL/RGB. Flip the
+    # channel order so face detection behaves the way it does on frames that
+    # come straight from cv2.VideoCapture / cv2.imread, which is what DeepFace
+    # is tested against.
+    image_array = np.array(image)[:, :, ::-1]
 
     # --- Run inference ---
     # Imported lazily so the model only loads once, on first real request,
@@ -88,7 +115,7 @@ def analyze_emotion(payload: AnalyzeRequest):
             enforce_detection=True,  # raises if no face is found - we want that
             detector_backend="opencv",
         )
-    except ValueError as e:
+    except ValueError:
         # DeepFace raises ValueError specifically when no face is detected.
         logger.info("No face detected in submitted image.")
         raise HTTPException(
@@ -117,3 +144,6 @@ def analyze_emotion(payload: AnalyzeRequest):
         confidence=confidence,
         scores=EmotionScores(**normalized),
     )
+
+
+# uvicorn emotion_service:app --host 0.0.0.0 --port 5001 --reload

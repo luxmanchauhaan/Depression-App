@@ -9,6 +9,6 @@ router.post('/weight', requireAuth, logController.submitWeightLog);
 router.get('/weight', requireAuth, logController.getWeightHistory);
 router.post('/mood', requireAuth, logController.submitMoodLog);
 router.get('/mood', requireAuth, logController.getMoodHistory);
-
+router.patch('/mood/:id', requireAuth, logController.updateMoodLogNotes);
 
 module.exports = router;

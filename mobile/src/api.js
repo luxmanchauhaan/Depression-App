@@ -181,6 +181,23 @@ export function getDashboardSummary(token) {
   return authGet('/api/patient/summary', token);
 }
 
-export function submitMoodLog(token, payload) {
-  return request('/api/logs/mood', { body: payload, token });
+export function submitMoodLog(token, moodScore, notes, framesBase64, selfReportedEmotion) {
+  return authRequest(
+    '/api/logs/mood',
+    {
+      mood_score: moodScore,
+      notes,
+      frames_base64: framesBase64,
+      self_reported_emotion: selfReportedEmotion,
+    },
+    token
+  );
+}
+
+export function getMoodHistory(token) {
+  return authGet('/api/logs/mood', token);
+}
+
+export function updateMoodLogNotes(token, logId, notes) {
+  return authPatchBody(`/api/logs/mood/${logId}`, { notes }, token);
 }

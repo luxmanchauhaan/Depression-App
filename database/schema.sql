@@ -176,3 +176,20 @@ CREATE TABLE weight_logs (
 
 ALTER TABLE medicines ADD COLUMN notification_ids_json JSON DEFAULT NULL;
 ALTER TABLE bdi_responses ADD COLUMN recommendations_json JSON DEFAULT NULL;
+
+ALTER TABLE emotion_captures
+ADD COLUMN emotion_scores_json JSON AFTER confidence;
+
+CREATE TABLE emotion_logs (
+  id INT NOT NULL AUTO_INCREMENT,
+  patient_id INT NOT NULL,
+  dominant_emotion VARCHAR(20) NOT NULL,
+  confidence DECIMAL(5,4) NOT NULL,
+  scores_json JSON NOT NULL,
+  logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY patient_id (patient_id),
+  CONSTRAINT emotion_logs_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE emotion_logs;
