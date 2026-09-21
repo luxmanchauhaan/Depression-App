@@ -1,42 +1,27 @@
-import { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Animated, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import { submitMoodLog } from '../api';
 import { colors, spacing, radius, shadow } from '../theme';
 
 const THEME = { bg: '#E1E7FB', icon: '#6C7FD6' };
 
-// The 7 standard emotion categories, matched to whatever the camera-side
-// emotion detection model outputs (e.g. FER-style models: angry, disgust,
-// fear, happy, sad, surprise, neutral). Every question below offers exactly
-// these 7, just framed differently, so the "self-reported" emotion is the
-// mode (most-picked) answer across all 4 - a simple built-in reliability
-// check rather than relying on a single question.
 const EMOTIONS = ['happy', 'sad', 'angry', 'fear', 'disgust', 'surprise', 'neutral'];
 
 const EMOTION_META = {
-  happy: { label: 'Happy', icon: 'happy-outline' },
-  sad: { label: 'Sad', icon: 'sad-outline' },
-  angry: { label: 'Angry', icon: 'flame-outline' },
-  fear: { label: 'Fearful / Anxious', icon: 'alert-circle-outline' },
-  disgust: { label: 'Disgusted', icon: 'thumbs-down-outline' },
-  surprise: { label: 'Surprised', icon: 'flash-outline' },
-  neutral: { label: 'Neutral / Calm', icon: 'remove-circle-outline' },
+  happy: { label: 'Happy', icon: 'happy-outline', color: '#5FAE7B' },
+  sad: { label: 'Sad', icon: 'sad-outline', color: '#6C9BD6' },
+  angry: { label: 'Angry', icon: 'flame-outline', color: '#E07A7A' },
+  fear: { label: 'Fearful / Anxious', icon: 'alert-circle-outline', color: '#E0A458' },
+  disgust: { label: 'Disgusted', icon: 'thumbs-down-outline', color: '#B366C9' },
+  surprise: { label: 'Surprised', icon: 'flash-outline', color: '#4C9BD6' },
+  neutral: { label: 'Neutral / Calm', icon: 'remove-circle-outline', color: colors.textMuted },
 };
 
-// A rough 1-10 mood score per dominant emotion, kept only so the existing
-// mood_score field on the backend still gets a sensible value. The real
-// signal for the comparison step is the emotion category itself.
-const EMOTION_TO_SCORE = {
-  happy: 9,
-  surprise: 6,
-  neutral: 5,
-  fear: 3,
-  disgust: 3,
-  sad: 2,
-  angry: 2,
-};
+const EMOTION_TO_SCORE = { happy: 9, surprise: 6, neutral: 5, fear: 3, disgust: 3, sad: 2, angry: 2 };
 
 const QUESTIONS = [
   {
@@ -93,16 +78,11 @@ const QUESTIONS = [
   },
 ];
 
-// How the 30-second window is chopped up: one frame every 3 seconds = 10
-// frames total. The Python emotion service only ever analyzes one image
-// per call, so this stays as discrete stills rather than a video upload -
-// simpler on both ends, and the Node backend aggregates the 10 results.
 const CAPTURE_INTERVAL_MS = 3000;
-const CAPTURE_TOTAL_FRAMES = 10; // 10 * 3s = 30s
+const CAPTURE_TOTAL_FRAMES = 10;
+const SUBMIT_TIMEOUT_MS = 90000;
+const FRAME_WIDTH = 480;
 
-// Returns the most-picked emotion across the 4 answers. Ties are broken by
-// the order in EMOTIONS (stable, deterministic) rather than by answer order,
-// so the result doesn't depend on which question the tie came from.
 function computeDominantEmotion(answers) {
   const counts = {};
   answers.forEach((emotion) => {
@@ -124,27 +104,81 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Circular countdown ring drawn with react-native-svg (already a dependency
+// via the chart library) - avoids pulling in a new package for this.
+function CountdownRing({ progress, size = 84, strokeWidth = 7 }) {
+  const radiusVal = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radiusVal;
+  const offset = circumference * (1 - progress);
+
+  return (
+    <Svg width={size} height={size}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radiusVal}
+        stroke="rgba(255,255,255,0.35)"
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radiusVal}
+        stroke="#fff"
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        rotation="-90"
+        origin={`${size / 2}, ${size / 2}`}
+      />
+    </Svg>
+  );
+}
+
 export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
   const [permission, requestPermission] = useCameraPermissions();
-  const [step, setStep] = useState('questions'); // 'questions' | 'camera' | 'result'
+  const [step, setStep] = useState('questions');
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [capturing, setCapturing] = useState(false);
   const [framesCaptured, setFramesCaptured] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
   const cameraRef = useRef(null);
   const framesRef = useRef([]);
   const cancelledRef = useRef(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const currentQuestion = QUESTIONS[questionIndex];
   const selfReportedEmotion = answers.length === QUESTIONS.length ? computeDominantEmotion(answers) : null;
   const moodScore = selfReportedEmotion ? EMOTION_TO_SCORE[selfReportedEmotion] : 5;
 
+  useEffect(() => {
+    if (!capturing) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [capturing]);
+
+  // Fallback: some devices never fire onCameraReady, which left the Start button disabled.
+  useEffect(() => {
+    if (step !== 'camera' || !permission?.granted) return;
+    const timer = setTimeout(() => setCameraReady(true), 1500);
+    return () => clearTimeout(timer);
+  }, [step, permission?.granted]);
+
   function handleAnswer(emotion) {
     const nextAnswers = [...answers, emotion];
     setAnswers(nextAnswers);
-
     if (questionIndex + 1 < QUESTIONS.length) {
       setQuestionIndex(questionIndex + 1);
     } else {
@@ -162,7 +196,10 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
   }
 
   async function startCapture() {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current) {
+      Alert.alert('Camera not ready', 'Please wait a moment and try again.');
+      return;
+    }
     cancelledRef.current = false;
     framesRef.current = [];
     setFramesCaptured(0);
@@ -170,24 +207,26 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
 
     for (let i = 0; i < CAPTURE_TOTAL_FRAMES; i++) {
       if (cancelledRef.current) return;
-
       try {
         const photo = await cameraRef.current.takePictureAsync({
-          base64: true,
-          quality: 0.4,
+          quality: 0.5,
           skipProcessing: true,
         });
-        framesRef.current.push(photo.base64);
+        // Shrink each frame so the upload is small (raw camera photos are many MB each).
+        const small = await manipulateAsync(
+          photo.uri,
+          [{ resize: { width: FRAME_WIDTH } }],
+          { compress: 0.6, format: SaveFormat.JPEG, base64: true }
+        );
+        framesRef.current.push(small.base64);
         setFramesCaptured(framesRef.current.length);
       } catch (err) {
-        // Skip a failed frame (e.g. camera momentarily busy) and keep going -
-        // the backend tolerates some frames failing analysis later too.
-        console.log('Frame capture failed, skipping:', err.message);
+        console.log('Frame capture failed:', err.message);
+        if (framesRef.current.length === 0 && i === 0) {
+          Alert.alert('Capture error (debug)', err.message);
+        }
       }
-
       if (cancelledRef.current) return;
-
-      // Don't wait after the last frame.
       if (i < CAPTURE_TOTAL_FRAMES - 1) {
         await wait(CAPTURE_INTERVAL_MS);
       }
@@ -211,7 +250,15 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
   async function handleSubmit() {
     setSubmitting(true);
     try {
-      const response = await submitMoodLog(token, moodScore, null, framesRef.current, selfReportedEmotion);
+      const response = await Promise.race([
+        submitMoodLog(token, moodScore, null, framesRef.current, selfReportedEmotion),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('The analysis is taking too long. Check that the backend server is running and reachable from your phone, then try again.')),
+            SUBMIT_TIMEOUT_MS
+          )
+        ),
+      ]);
       setResult(response);
       setStep('result');
     } catch (err) {
@@ -230,35 +277,47 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
             <Ionicons name="happy-outline" size={28} color={THEME.icon} />
           </View>
           <Text style={styles.headerTitle}>Mood Check-In</Text>
-          <Text style={styles.headerProgress}>
-            Question {questionIndex + 1} of {QUESTIONS.length}
-          </Text>
+
+          <View style={styles.stepDots}>
+            {QUESTIONS.map((q, i) => (
+              <View
+                key={q.id}
+                style={[
+                  styles.stepDot,
+                  i === questionIndex && styles.stepDotActive,
+                  i < questionIndex && styles.stepDotDone,
+                ]}
+              />
+            ))}
+          </View>
         </View>
 
-        <View style={styles.body}>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.lg }}>
           <Text style={styles.questionPrompt}>{currentQuestion.prompt}</Text>
 
-          {currentQuestion.options.map((option) => (
-            <TouchableOpacity
-              key={option.emotion}
-              style={styles.optionRow}
-              onPress={() => handleAnswer(option.emotion)}
-            >
-              <Ionicons
-                name={EMOTION_META[option.emotion].icon}
-                size={20}
-                color={THEME.icon}
-                style={{ marginRight: spacing.sm }}
-              />
-              <Text style={styles.optionText}>{option.text}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-          ))}
+          {currentQuestion.options.map((option) => {
+            const meta = EMOTION_META[option.emotion];
+            return (
+              <TouchableOpacity
+                key={option.emotion}
+                style={styles.optionRow}
+                onPress={() => handleAnswer(option.emotion)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.optionIconWrap, { backgroundColor: meta.color + '22' }]}>
+                  <Ionicons name={meta.icon} size={18} color={meta.color} />
+                </View>
+                <Text style={styles.optionText}>{option.text}</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            );
+          })}
 
           <TouchableOpacity onPress={handleBackQuestion} style={styles.backLink}>
+            <Ionicons name="arrow-back" size={14} color={colors.primaryDark} style={{ marginRight: 6 }} />
             <Text style={styles.backLinkText}>{questionIndex === 0 ? 'Cancel' : 'Back'}</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -276,7 +335,9 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
     if (!permission.granted) {
       return (
         <View style={styles.centerContainer}>
-          <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
+          <View style={[styles.resultIconWrap, { backgroundColor: THEME.bg }]}>
+            <Ionicons name="camera-outline" size={36} color={THEME.icon} />
+          </View>
           <Text style={styles.permissionText}>Camera access is needed for mood check-ins.</Text>
           <TouchableOpacity style={[styles.primaryButton, { backgroundColor: THEME.icon }]} onPress={requestPermission}>
             <Text style={styles.primaryButtonText}>Grant Permission</Text>
@@ -288,7 +349,8 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
       );
     }
 
-    const secondsRemaining = Math.max(0, (CAPTURE_TOTAL_FRAMES - framesCaptured) * (CAPTURE_INTERVAL_MS / 1000));
+    const progress = framesCaptured / CAPTURE_TOTAL_FRAMES;
+    const secondsRemaining = Math.max(0, Math.round((CAPTURE_TOTAL_FRAMES - framesCaptured) * (CAPTURE_INTERVAL_MS / 1000)));
 
     return (
       <View style={styles.container}>
@@ -299,85 +361,148 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
           <Text style={styles.headerTitle}>Mood Check-In</Text>
         </View>
 
-        <View style={styles.body}>
+        <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.lg }}>
           <View style={styles.cameraWrap}>
-            <CameraView ref={cameraRef} style={styles.camera} facing="front" />
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: capturing ? pulseAnim : 1 }] }]}>
+              <CameraView ref={cameraRef} style={styles.camera} facing="front" onCameraReady={() => setCameraReady(true)} />
+            </Animated.View>
+
             {capturing && (
               <View style={styles.captureOverlay}>
-                <View style={styles.captureBadge}>
-                  <ActivityIndicator color="#fff" size="small" style={{ marginRight: 8 }} />
-                  <Text style={styles.captureBadgeText}>{secondsRemaining}s left</Text>
+                <View style={styles.ringWrap}>
+                  <CountdownRing progress={progress} />
+                  <View style={styles.ringCenter}>
+                    <Text style={styles.ringCenterText}>{secondsRemaining}s</Text>
+                  </View>
                 </View>
               </View>
+            )}
+
+            {!capturing && (
+              <View style={styles.faceGuide} pointerEvents="none" />
             )}
           </View>
 
           {!capturing && (
-            <>
-              <Text style={styles.moodLabel}>
-                You said you're feeling: {EMOTION_META[selfReportedEmotion].label}
-              </Text>
-              <Text style={styles.subLabel}>
-                We'll take a 30-second look via the camera and compare it with what you told us.
-              </Text>
-            </>
+            <View style={styles.selfReportCard}>
+              <Ionicons name={EMOTION_META[selfReportedEmotion].icon} size={20} color={THEME.icon} style={{ marginRight: 8 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.selfReportLabel}>You said you're feeling</Text>
+                <Text style={styles.selfReportValue}>{EMOTION_META[selfReportedEmotion].label}</Text>
+              </View>
+            </View>
+          )}
+
+          {!capturing && (
+            <Text style={styles.subLabel}>
+              We'll take a 30-second look via the camera and compare it with what you told us.
+            </Text>
           )}
 
           {capturing && (
             <View style={styles.progressWrap}>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${(framesCaptured / CAPTURE_TOTAL_FRAMES) * 100}%` }]} />
+                <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
               </View>
-              <Text style={styles.subLabel}>Hold still and look at the camera ({framesCaptured}/{CAPTURE_TOTAL_FRAMES})</Text>
+              <Text style={styles.subLabel}>Hold still and look at the camera · frame {framesCaptured}/{CAPTURE_TOTAL_FRAMES}</Text>
             </View>
           )}
 
           {submitting ? (
             <View style={[styles.primaryButton, { backgroundColor: THEME.icon }]}>
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryButtonText}>Analyzing...</Text>
             </View>
           ) : capturing ? (
             <TouchableOpacity style={[styles.primaryButton, styles.cancelButton]} onPress={cancelCapture}>
               <Text style={styles.primaryButtonText}>Cancel</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: THEME.icon }]} onPress={startCapture}>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: THEME.icon, opacity: cameraReady ? 1 : 0.5 }]}
+              onPress={startCapture}
+              disabled={!cameraReady}
+            >
               <Ionicons name="camera" size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.primaryButtonText}>Start 30-Second Check-In</Text>
             </TouchableOpacity>
           )}
-
-          {!capturing && !submitting && (
-            <TouchableOpacity onPress={onBack} style={styles.backLink}>
-              <Text style={styles.backLinkText}>Cancel</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
   // ---- Step 3: result ----
+  const detected = result.emotion;
+  const detectedMeta = EMOTION_META[detected.dominant_emotion] || EMOTION_META.neutral;
+  const selfMeta = EMOTION_META[selfReportedEmotion] || EMOTION_META.neutral;
+  const agree = selfReportedEmotion === detected.dominant_emotion;
+  const sortedScores = Object.entries(detected.scores || {}).sort((a, b) => b[1] - a[1]);
+
   return (
-    <View style={styles.centerContainer}>
-      <View style={[styles.resultIconWrap, { backgroundColor: THEME.bg }]}>
-        <Ionicons name="checkmark-circle" size={40} color={THEME.icon} />
-      </View>
-      <Text style={styles.resultTitle}>Check-in saved</Text>
-      <Text style={styles.resultDetail}>
-        Detected: {result.emotion.dominant_emotion} ({Math.round(result.emotion.confidence * 100)}% confidence)
-      </Text>
-
-      {result.mismatch_prompt && (
-        <View style={styles.mismatchCard}>
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color={THEME.icon} style={{ marginRight: 8 }} />
-          <Text style={styles.mismatchText}>{result.mismatch_prompt}</Text>
+    <View style={styles.container}>
+      <View style={[styles.header, { backgroundColor: THEME.icon }]}>
+        <View style={[styles.headerIconWrap, { backgroundColor: THEME.bg }]}>
+          <Ionicons name="checkmark-circle" size={28} color={THEME.icon} />
         </View>
-      )}
+        <Text style={styles.headerTitle}>Check-In Complete</Text>
+      </View>
 
-      <TouchableOpacity style={[styles.primaryButton, { backgroundColor: THEME.icon }]} onPress={onBack}>
-        <Text style={styles.primaryButtonText}>Done</Text>
-      </TouchableOpacity>
+      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.lg }}>
+        <View style={styles.compareRow}>
+          <View style={styles.compareCard}>
+            <Text style={styles.compareLabel}>YOU SAID</Text>
+            <View style={[styles.compareIconWrap, { backgroundColor: selfMeta.color + '22' }]}>
+              <Ionicons name={selfMeta.icon} size={24} color={selfMeta.color} />
+            </View>
+            <Text style={styles.compareValue}>{selfMeta.label}</Text>
+          </View>
+
+          <View style={styles.compareDivider}>
+            <Ionicons
+              name={agree ? 'checkmark-circle' : 'swap-horizontal'}
+              size={22}
+              color={agree ? colors.primary : colors.textMuted}
+            />
+          </View>
+
+          <View style={styles.compareCard}>
+            <Text style={styles.compareLabel}>WE DETECTED</Text>
+            <View style={[styles.compareIconWrap, { backgroundColor: detectedMeta.color + '22' }]}>
+              <Ionicons name={detectedMeta.icon} size={24} color={detectedMeta.color} />
+            </View>
+            <Text style={styles.compareValue}>{detectedMeta.label}</Text>
+            <Text style={styles.compareConfidence}>{Math.round(detected.confidence * 100)}% confidence</Text>
+          </View>
+        </View>
+
+        {result.mismatch_prompt && (
+          <View style={styles.mismatchCard}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={THEME.icon} style={{ marginRight: 8 }} />
+            <Text style={styles.mismatchText}>{result.mismatch_prompt}</Text>
+          </View>
+        )}
+
+        <Text style={styles.breakdownTitle}>Emotion breakdown</Text>
+        <View style={styles.breakdownCard}>
+          {sortedScores.map(([emotion, score]) => {
+            const meta = EMOTION_META[emotion] || EMOTION_META.neutral;
+            return (
+              <View key={emotion} style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>{meta.label}</Text>
+                <View style={styles.breakdownBarTrack}>
+                  <View style={[styles.breakdownBarFill, { width: `${Math.max(score * 100, 2)}%`, backgroundColor: meta.color }]} />
+                </View>
+                <Text style={styles.breakdownPercent}>{Math.round(score * 100)}%</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <TouchableOpacity style={[styles.primaryButton, { backgroundColor: THEME.icon, marginTop: spacing.md }]} onPress={onBack}>
+          <Text style={styles.primaryButtonText}>Done</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
@@ -391,7 +516,10 @@ const styles = StyleSheet.create({
   },
   headerIconWrap: { width: 56, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
-  headerProgress: { fontSize: 12, color: '#fff', opacity: 0.85, marginTop: 4, fontWeight: '600' },
+  stepDots: { flexDirection: 'row', marginTop: spacing.sm },
+  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.35)', marginHorizontal: 4 },
+  stepDotActive: { backgroundColor: '#fff', width: 20 },
+  stepDotDone: { backgroundColor: 'rgba(255,255,255,0.75)' },
   body: { flex: 1, padding: spacing.md },
   questionPrompt: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: spacing.md, lineHeight: 23 },
   optionRow: {
@@ -399,59 +527,83 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.sm,
     ...shadow,
   },
-  optionText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  optionIconWrap: {
+    width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm,
+  },
+  optionText: { fontSize: 15, fontWeight: '600', color: colors.text, flexShrink: 1 },
   cameraWrap: {
     width: '100%',
-    aspectRatio: 3 / 4,
+    aspectRatio: 1,
     borderRadius: radius.md,
     overflow: 'hidden',
     marginBottom: spacing.md,
+    backgroundColor: '#000',
     ...shadow,
   },
   camera: { flex: 1 },
-  captureOverlay: {
+  faceGuide: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
+    top: '18%',
+    left: '20%',
+    right: '20%',
+    bottom: '28%',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 999,
   },
-  captureBadge: {
-    flexDirection: 'row',
+  captureOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: radius.pill,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
-  captureBadgeText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  moodLabel: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 2, textAlign: 'center' },
+  ringWrap: { alignItems: 'center', justifyContent: 'center' },
+  ringCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  ringCenterText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  selfReportCard: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs, ...shadow,
+  },
+  selfReportLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase' },
+  selfReportValue: { fontSize: 15, fontWeight: '700', color: colors.text },
   subLabel: { fontSize: 13, color: colors.textMuted, marginBottom: spacing.md, textAlign: 'center' },
   progressWrap: { marginBottom: spacing.md },
   progressTrack: {
-    width: '100%',
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
+    width: '100%', height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden', marginBottom: spacing.sm,
   },
   progressFill: { height: '100%', backgroundColor: THEME.icon },
   primaryButton: { flexDirection: 'row', paddingVertical: 15, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
   cancelButton: { backgroundColor: colors.danger },
   primaryButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   permissionText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginVertical: spacing.md },
-  backLink: { alignItems: 'center', marginTop: spacing.md },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
   backLinkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
   resultIconWrap: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
-  resultTitle: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
-  resultDetail: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md, textAlign: 'center', textTransform: 'capitalize' },
+  compareRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  compareCard: {
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm,
+    alignItems: 'center', ...shadow,
+  },
+  compareLabel: { fontSize: 10, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.xs },
+  compareIconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  compareValue: { fontSize: 14, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  compareConfidence: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  compareDivider: { paddingHorizontal: spacing.xs },
   mismatchCard: {
     flexDirection: 'row', alignItems: 'flex-start', backgroundColor: THEME.bg, borderRadius: radius.md,
-    padding: spacing.sm, marginBottom: spacing.md, maxWidth: 320,
+    padding: spacing.sm, marginBottom: spacing.md,
   },
   mismatchText: { fontSize: 13, color: THEME.icon, flex: 1, lineHeight: 18, fontWeight: '500' },
+  breakdownTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  breakdownCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, ...shadow },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  breakdownLabel: { width: 90, fontSize: 12, color: colors.text, fontWeight: '600' },
+  breakdownBarTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden', marginHorizontal: spacing.sm },
+  breakdownBarFill: { height: '100%', borderRadius: 4 },
+  breakdownPercent: { width: 36, fontSize: 12, color: colors.textMuted, fontWeight: '600', textAlign: 'right' },
 });
