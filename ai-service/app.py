@@ -30,6 +30,17 @@ logger = logging.getLogger("emotion-service")
 
 app = FastAPI(title="Emotion Detection Service")
 
+@app.on_event("startup")
+def warm_up_model():
+    logger.info("Warming up emotion model...")
+    from deepface import DeepFace
+    dummy = np.zeros((100, 100, 3), dtype=np.uint8)
+    try:
+        DeepFace.analyze(img_path=dummy, actions=["emotion"], enforce_detection=False, detector_backend="opencv")
+    except Exception:
+        pass  # dummy image has no face - we only care that the model weights loaded
+    logger.info("Emotion model ready.")
+
 # Permissive CORS since this sits behind the Node backend, which is the only
 # thing that should be calling it directly in production (enforced below via
 # the shared-secret header, not by CORS - CORS alone doesn't stop server-to-
@@ -101,7 +112,9 @@ def analyze_emotion(payload: AnalyzeRequest, x_internal_key: str = Header(defaul
     # channel order so face detection behaves the way it does on frames that
     # come straight from cv2.VideoCapture / cv2.imread, which is what DeepFace
     # is tested against.
+    image.thumbnail((320, 320))
     image_array = np.array(image)[:, :, ::-1]
+    # image_array = np.array(image)[:, :, ::-1]
 
     # --- Run inference ---
     # Imported lazily so the model only loads once, on first real request,
@@ -146,4 +159,4 @@ def analyze_emotion(payload: AnalyzeRequest, x_internal_key: str = Header(defaul
     )
 
 
-# uvicorn emotion_service:app --host 0.0.0.0 --port 5001 --reload
+# uvicorn app:app --host 0.0.0.0 --port 5001 --reload

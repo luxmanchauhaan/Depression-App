@@ -31,9 +31,18 @@ const EMOTION_LABELS = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 
  * throws, matching the error style callers of callEmotionService expect.
  */
 async function callEmotionServiceFrames(framesBase64) {
-  const settled = await Promise.allSettled(framesBase64.map(callEmotionService));
-  const successful = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  // const settled = await Promise.allSettled(framesBase64.map(callEmotionService));
+  // const successful = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
 
+  const BATCH_SIZE = 3; // tune based on your CPU core count
+  const settled = [];
+  for (let i = 0; i < framesBase64.length; i += BATCH_SIZE) {
+    const batch = framesBase64.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.allSettled(batch.map(callEmotionService));
+    settled.push(...batchResults);
+  }
+  const successful = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  
   if (successful.length === 0) {
     const failureReason = settled[0] && settled[0].reason;
     throw new Error(
