@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { getDashboardSummary } from '../api';
-import { colors, spacing, radius, typography, shadow, buttonBase } from '../theme';
+import { colors, spacing, radius, typography, shadow, buttonBase, menuColors } from '../theme';
 
 function getSeverityColor(severity) {
   const key = (severity || '').toLowerCase();
@@ -11,6 +11,13 @@ function getSeverityColor(severity) {
   if (key.includes('moderate')) return '#E0A458';
   if (key.includes('mild')) return colors.accent;
   return colors.primary;
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 const COGNITIVE_LABELS = {
@@ -43,6 +50,9 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     }
   }
 
+  const firstName = (user.fullName || 'there').split(' ')[0];
+  const greeting = getGreeting();
+
   if (user.role === 'doctor') {
     const doctorMenuItems = [
       { key: 'patientList', label: 'Patients', icon: 'people-outline' },
@@ -51,23 +61,31 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={[typography.title, styles.headerTitle]}>Welcome, {user.fullName || 'there'}</Text>
+          <Text style={[typography.title, styles.headerTitle]}>{greeting}, {firstName}</Text>
           <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
         </View>
 
         <View style={styles.body}>
           <View style={styles.grid}>
-            {doctorMenuItems.map((item) => (
-              <TouchableOpacity key={item.key} style={styles.gridCard} onPress={() => onNavigate(item.key)}>
-                <View style={styles.gridIconWrap}>
-                  <Ionicons name={item.icon} size={26} color={colors.primary} />
-                </View>
-                <Text style={styles.gridCardText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
+            {doctorMenuItems.map((item) => {
+              const c = menuColors[item.key] || { bg: colors.primaryLight, icon: colors.primary };
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.gridCard}
+                  activeOpacity={0.75}
+                  onPress={() => onNavigate(item.key)}
+                >
+                  <View style={[styles.gridIconWrap, { backgroundColor: c.bg }]}>
+                    <Ionicons name={item.icon} size={26} color={c.icon} />
+                  </View>
+                  <Text style={styles.gridCardText}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+          <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={onLogout}>
             <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
             <Text style={styles.logoutButtonText}>Log out</Text>
           </TouchableOpacity>
@@ -103,8 +121,21 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     monthLabel = firstMonth === lastMonth ? firstMonth : `${firstDate.toLocaleDateString(undefined, { month: 'short' })} – ${lastMonth}`;
   }
 
+  // Show just the day number ("12"), but prefix the short month ("Sep 2") at the
+  // point where the month changes, so two points from different months never
+  // show the same bare day number (e.g. Aug 2 and Sep 2 both just showing "2").
+  let prevMonth = null;
+  const chartLabels = bdiHistory.map((item) => {
+    const d = new Date(item.taken_at);
+    const month = d.getMonth();
+    const day = String(d.getDate());
+    const label = month !== prevMonth ? `${d.toLocaleDateString(undefined, { month: 'short' })} ${day}` : day;
+    prevMonth = month;
+    return label;
+  });
+
   const chartData = {
-    labels: bdiHistory.map((item) => String(new Date(item.taken_at).getDate())),
+    labels: chartLabels,
     datasets: [{ data: bdiHistory.map((item) => item.total_score) }],
   };
 
@@ -113,7 +144,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[typography.title, styles.headerTitle]}>Welcome, {user.fullName || 'there'}</Text>
+        <Text style={[typography.title, styles.headerTitle]}>{greeting}, {firstName}</Text>
         <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
       </View>
 
@@ -214,17 +245,25 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
         )}
 
         <View style={styles.grid}>
-          {menuItems.map((item) => (
-            <TouchableOpacity key={item.key} style={styles.gridCard} onPress={() => onNavigate(item.key)}>
-              <View style={styles.gridIconWrap}>
-                <Ionicons name={item.icon} size={26} color={colors.primary} />
-              </View>
-              <Text style={styles.gridCardText}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {menuItems.map((item) => {
+            const c = menuColors[item.key] || { bg: colors.primaryLight, icon: colors.primary };
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.gridCard}
+                activeOpacity={0.75}
+                onPress={() => onNavigate(item.key)}
+              >
+                <View style={[styles.gridIconWrap, { backgroundColor: c.bg }]}>
+                  <Ionicons name={item.icon} size={26} color={c.icon} />
+                </View>
+                <Text style={styles.gridCardText}>{item.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={onLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>Log out</Text>
         </TouchableOpacity>
@@ -327,7 +366,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
