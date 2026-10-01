@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 export default function LandingScreen({ onNavigate }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Depression app</Text>
+      <Text style={styles.title}>Manodrishti</Text>
       <Text style={styles.subtitle}>Track mood, get support, stay on top of it.</Text>
 
       <TouchableOpacity style={styles.button} onPress={() => onNavigate('patientSignup')}>

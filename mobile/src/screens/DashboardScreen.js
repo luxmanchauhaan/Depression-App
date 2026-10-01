@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { getDashboardSummary } from '../api';
@@ -20,6 +20,10 @@ function getGreeting() {
   return 'Good evening';
 }
 
+function getTodayLabel() {
+  return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 const COGNITIVE_LABELS = {
   memory: 'Memory Test',
   attention: 'Attention Test',
@@ -31,6 +35,7 @@ const COGNITIVE_LABELS = {
 export default function DashboardScreen({ user, onLogout, onNavigate }) {
   const [summary, setSummary] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user.role === 'patient') {
@@ -50,8 +55,21 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     }
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      const result = await getDashboardSummary(user.token);
+      setSummary(result);
+    } catch (err) {
+      console.log('Failed to refresh dashboard summary:', err.message);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   const firstName = (user.fullName || 'there').split(' ')[0];
   const greeting = getGreeting();
+  const todayLabel = getTodayLabel();
 
   if (user.role === 'doctor') {
     const doctorMenuItems = [
@@ -62,7 +80,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={[typography.title, styles.headerTitle]}>{greeting}, {firstName}</Text>
-          <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
+          <Text style={[typography.subtitle, styles.headerSubtitle]}>{todayLabel}</Text>
         </View>
 
         <View style={styles.body}>
@@ -95,7 +113,6 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
   }
 
   const menuItems = [
-    { key: 'moodCheckIn', label: 'Mood Check-in', icon: 'happy-outline' },
     { key: 'questionnaire', label: 'Questionnaire', icon: 'clipboard-outline' },
     { key: 'activities', label: 'Cognitive Activities', icon: 'game-controller-outline' },
     { key: 'myHistory', label: 'History', icon: 'bar-chart-outline' },
@@ -145,10 +162,30 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[typography.title, styles.headerTitle]}>{greeting}, {firstName}</Text>
-        <Text style={[typography.subtitle, styles.headerSubtitle]}>Role : {user.role}</Text>
+        <Text style={[typography.subtitle, styles.headerSubtitle]}>{todayLabel}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView
+        contentContainerStyle={styles.body}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+        }
+      >
+        <TouchableOpacity
+          style={styles.featuredCard}
+          activeOpacity={0.85}
+          onPress={() => onNavigate('moodCheckIn')}
+        >
+          <View style={styles.featuredIconWrap}>
+            <Ionicons name="happy-outline" size={28} color="#fff" />
+          </View>
+          <View style={styles.featuredTextWrap}>
+            <Text style={styles.featuredTitle}>Mood Check-in</Text>
+            <Text style={styles.featuredSubtitle}>Take a moment to check in with how you're feeling today</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#fff" />
+        </TouchableOpacity>
+
         {loadingSummary ? (
           <ActivityIndicator style={{ marginBottom: spacing.md }} color={colors.primary} />
         ) : (
@@ -194,10 +231,11 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
               )}
             </View>
 
+            <Text style={styles.sectionHeading}>Overview</Text>
             <View style={styles.quickGrid}>
               <View style={styles.quickCard}>
                 <Ionicons name="clipboard" size={18} color={severityColor} />
-                <Text style={styles.quickLabel}>Latest Questionnaire Score</Text>
+                <Text style={styles.quickLabel}>Questionnaire</Text>
                 {summary?.latest_bdi ? (
                   <Text style={[styles.quickValue, { color: severityColor }]}>
                     {summary.latest_bdi.total_score} · {summary.latest_bdi.severity}
@@ -209,7 +247,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
 
               <View style={styles.quickCard}>
                 <Ionicons name="game-controller" size={18} color={colors.primary} />
-                <Text style={styles.quickLabel}>Last Activity</Text>
+                <Text style={styles.quickLabel}>Activity</Text>
                 {summary?.latest_cognitive ? (
                   <Text style={styles.quickValue}>
                     {COGNITIVE_LABELS[summary.latest_cognitive.test_type] || summary.latest_cognitive.test_type} · {summary.latest_cognitive.score}
@@ -221,7 +259,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
 
               <View style={styles.quickCard}>
                 <Ionicons name="moon" size={18} color={colors.primary} />
-                <Text style={styles.quickLabel}>Last Sleep</Text>
+                <Text style={styles.quickLabel}>Sleep</Text>
                 {summary?.latest_sleep ? (
                   <Text style={styles.quickValue}>
                     {summary.latest_sleep.hours_slept}h · {summary.latest_sleep.quality}
@@ -233,7 +271,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
 
               <View style={styles.quickCard}>
                 <Ionicons name="scale" size={18} color={colors.primary} />
-                <Text style={styles.quickLabel}>Last Weight</Text>
+                <Text style={styles.quickLabel}>Weight</Text>
                 {summary?.latest_weight ? (
                   <Text style={styles.quickValue}>{summary.latest_weight.weight_kg} kg</Text>
                 ) : (
@@ -244,6 +282,7 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
           </>
         )}
 
+        <Text style={styles.sectionHeading}>Quick Actions</Text>
         <View style={styles.grid}>
           {menuItems.map((item) => {
             const c = menuColors[item.key] || { bg: colors.primaryLight, icon: colors.primary };
@@ -262,11 +301,6 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
             );
           })}
         </View>
-
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
-          <Text style={styles.logoutButtonText}>Log out</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -287,6 +321,27 @@ const styles = StyleSheet.create({
   headerTitle: { includeFontPadding: false, textAlignVertical: 'center' },
   headerSubtitle: { marginTop: 2, includeFontPadding: false, textAlignVertical: 'center' },
   body: { padding: spacing.md },
+  featuredCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6C7FD6',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow,
+  },
+  featuredIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  featuredTextWrap: { flex: 1 },
+  featuredTitle: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 2 },
+  featuredSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 16 },
   growthCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -295,6 +350,7 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   growthTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 2 },
+  sectionHeading: { ...typography.sectionHeading, marginBottom: spacing.xs, marginTop: spacing.xs },
   monthLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginBottom: spacing.xs },
   growthEmptyText: { fontSize: 13, color: colors.textMuted, paddingVertical: spacing.md, textAlign: 'center' },
   chartRow: { flexDirection: 'row', alignItems: 'center' },
@@ -338,6 +394,7 @@ const styles = StyleSheet.create({
   },
   quickCard: {
     width: '48%',
+    minHeight: 88,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.sm,

@@ -103,4 +103,82 @@ async function login(req, res) {
   }
 }
 
-module.exports = { signupDoctor, signupPatient, login };
+// GET /api/auth/me
+// Returns the logged-in user's profile. For patients, includes date_of_birth,
+// gender, and the linked doctor's code/specialization. For doctors, includes
+// their own doctor_code/specialization.
+async function getProfile(req, res) {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'email', 'full_name', 'role', 'created_at'],
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const profile = {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role,
+      member_since: user.created_at,
+    };
+
+    if (user.role === 'patient') {
+      const patient = await Patient.findOne({ where: { user_id: user.id } });
+      if (patient) {
+        profile.date_of_birth = patient.date_of_birth;
+        profile.gender = patient.gender;
+        const doctor = await Doctor.findByPk(patient.doctor_id);
+        if (doctor) {
+          profile.doctor_code = doctor.doctor_code;
+          profile.doctor_specialization = doctor.specialization;
+        }
+      }
+    } else if (user.role === 'doctor') {
+      const doctor = await Doctor.findOne({ where: { user_id: user.id } });
+      if (doctor) {
+        profile.doctor_code = doctor.doctor_code;
+        profile.specialization = doctor.specialization;
+      }
+    }
+
+    res.json(profile);
+  } catch (err) {
+    console.error('Get profile error:', err.message);
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+}
+
+// PUT /api/auth/change-password
+async function changePassword(req, res) {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'current_password and new_password are required' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const valid = await bcrypt.compare(current_password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    user.password_hash = await bcrypt.hash(new_password, 10);
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Change password error:', err.message);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+}
+
+module.exports = { signupDoctor, signupPatient, login, getProfile, changePassword };

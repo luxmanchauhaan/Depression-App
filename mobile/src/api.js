@@ -89,6 +89,22 @@ async function authPatchBody(path, body, token) {
   return data;
 }
 
+async function authPutBody(path, body, token) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || data.message || 'Something went wrong');
+  }
+  return data;
+}
+
 export function signupDoctor(payload) {
   return request('/api/auth/signup/doctor', payload);
 }
@@ -99,6 +115,18 @@ export function signupPatient(payload) {
 
 export function login(payload) {
   return request('/api/auth/login', payload);
+}
+
+export function getProfile(token) {
+  return authGet('/api/auth/me', token);
+}
+
+export function changePassword(token, currentPassword, newPassword) {
+  return authPutBody(
+    '/api/auth/change-password',
+    { current_password: currentPassword, new_password: newPassword },
+    token
+  );
 }
 
 export function submitQuestionnaire(token, orderedAnswers) {
