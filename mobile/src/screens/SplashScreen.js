@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadow } from '../theme';
 
-const DISPLAY_DURATION_MS = 3200;
+const DISPLAY_DURATION_MS = 4000;
 
 export default function SplashScreen({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,23 +34,23 @@ export default function SplashScreen({ onFinish }) {
         </View>
         <Text style={styles.appName}>Manodrishti</Text>
         <Text style={styles.tagline}>मनोदृष्टि · Vision of the Mind</Text>
-      </Animated.View>
 
-      <Animated.View style={[styles.fullFormCard, { opacity: cardFade }]}>
-        <Text style={styles.fullFormLabel}>WHAT IT STANDS FOR</Text>
-        <Text style={styles.fullFormText}>
-          <Text style={styles.fullFormLetter}>M</Text>ental{' '}
-          <Text style={styles.fullFormLetter}>A</Text>ssessment &{' '}
-          <Text style={styles.fullFormLetter}>N</Text>eurocognitive{'\n'}
-          <Text style={styles.fullFormLetter}>O</Text>bservation for{' '}
-          <Text style={styles.fullFormLetter}>D</Text>epression{' '}
-          <Text style={styles.fullFormLetter}>R</Text>ecovery{'\n'}
-          <Text style={styles.fullFormLetter}>I</Text>ntelligent{' '}
-          <Text style={styles.fullFormLetter}>S</Text>elf-care, {'\n'}
-          <Text style={styles.fullFormLetter}>H</Text>ealth{' '}
-          <Text style={styles.fullFormLetter}>T</Text>racking &{' '}
-          <Text style={styles.fullFormLetter}>I</Text>nsight
-        </Text>
+        <Animated.View style={[styles.fullFormCard, { opacity: cardFade }]}>
+          <Text style={styles.fullFormLabel}>WHAT IT STANDS FOR</Text>
+          <Text style={styles.fullFormText}>
+            <Text style={styles.fullFormLetter}>M</Text>ental{' '}
+            <Text style={styles.fullFormLetter}>A</Text>ssessment &{' '}
+            <Text style={styles.fullFormLetter}>N</Text>eurocognitive{'\n'}
+            <Text style={styles.fullFormLetter}>O</Text>bservation for{' '}
+            <Text style={styles.fullFormLetter}>D</Text>epression{' '}
+            <Text style={styles.fullFormLetter}>R</Text>ecovery{'\n'}
+            <Text style={styles.fullFormLetter}>I</Text>ntelligent{' '}
+            <Text style={styles.fullFormLetter}>S</Text>elf-care, {'\n'}
+            <Text style={styles.fullFormLetter}>H</Text>ealth{' '}
+            <Text style={styles.fullFormLetter}>T</Text>racking &{' '}
+            <Text style={styles.fullFormLetter}>I</Text>nsight
+          </Text>
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  content: { alignItems: 'center' },
+  content: { alignItems: 'center', width: '100%' },
   iconWrap: {
     width: 84,
     height: 84,
@@ -88,10 +88,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   fullFormCard: {
-    position: 'absolute',
-    bottom: 64,
-    left: spacing.lg,
-    right: spacing.lg,
+    marginTop: spacing.xl,
+    width: '100%',
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: radius.md,
     paddingVertical: spacing.md,

@@ -4,6 +4,7 @@ import { colors, spacing, radius, shadow, categoryColors } from '../theme';
 
 const CATEGORIES = [
   { key: 'bdi', label: 'BDI-II Score', icon: 'heart-outline' },
+  { key: 'mood', label: 'Mood Check-ins', icon: 'happy-outline' },
   { key: 'memory', label: 'Memory Test', icon: 'extension-puzzle-outline' },
   { key: 'attention', label: 'Attention Test', icon: 'eye-outline' },
   { key: 'visual_memory', label: 'Visual Memory', icon: 'grid-outline' },
@@ -13,7 +14,7 @@ const CATEGORIES = [
   { key: 'weight', label: 'Weight Log', icon: 'scale-outline' },
 ];
 
-export default function PatientDetailScreen({ token, patient, onNavigate, onSelectCategory }) {
+export default function PatientDetailScreen({ token, patient, onNavigate, onBack, onSelectCategory }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -43,7 +44,7 @@ export default function PatientDetailScreen({ token, patient, onNavigate, onSele
           })}
         </View>
 
-        <TouchableOpacity onPress={() => onNavigate('patientList')} style={styles.backLink}>
+        <TouchableOpacity onPress={onBack} style={styles.backLink}>
           <Ionicons name="arrow-back" size={16} color={colors.primaryDark} style={{ marginRight: 6 }} />
           <Text style={styles.backLinkText}>Back to patient list</Text>
         </TouchableOpacity>

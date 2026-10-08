@@ -8,5 +8,6 @@ router.get('/patients/:patientId/cognitive-history', requireAuth, requireRole('d
 router.get('/patients/:patientId/bdi-history', requireAuth, requireRole('doctor'), doctorController.getPatientBdiHistory);
 router.get('/patients/:patientId/sleep-history', requireAuth, requireRole('doctor'), doctorController.getPatientSleepHistory);
 router.get('/patients/:patientId/weight-history', requireAuth, requireRole('doctor'), doctorController.getPatientWeightHistory);
+router.get('/patients/:patientId/mood-history', requireAuth, requireRole('doctor'), doctorController.getPatientMoodHistory);
 
 module.exports = router;

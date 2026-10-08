@@ -1,4 +1,4 @@
-const { Doctor, Patient, User, BdiResponse, CognitiveResult, SleepLog, WeightLog } = require('../models');
+const { Doctor, Patient, User, BdiResponse, CognitiveResult, SleepLog, WeightLog, MoodLog, EmotionCapture } = require('../models');
 
 exports.getPatients = async (req, res) => {
   try {
@@ -148,5 +148,37 @@ exports.getPatientWeightHistory = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching weight history.' });
+  }
+};
+
+// GET /api/doctor/patients/:patientId/mood-history
+// Returns the patient's mood check-ins, including the self-reported vs
+// AI-detected emotion and any note the patient chose to share after a
+// mismatch (MoodLog.notes).
+exports.getPatientMoodHistory = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ where: { user_id: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor record not found for this user.' });
+    }
+
+    const patient = await Patient.findOne({
+      where: { id: req.params.patientId, doctor_id: doctor.id },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found or not assigned to you.' });
+    }
+
+    const history = await MoodLog.findAll({
+      where: { patient_id: patient.id },
+      order: [['logged_at', 'DESC']],
+      include: [{ model: EmotionCapture, required: false }],
+    });
+
+    res.json({ history });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching mood history.' });
   }
 };

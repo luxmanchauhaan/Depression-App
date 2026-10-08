@@ -4,6 +4,7 @@ const patientController = require('../controllers/patient.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 
 router.post('/questionnaire', requireAuth, patientController.submitQuestionnaire);
+router.get('/questionnaire/eligibility', requireAuth, patientController.getQuestionnaireEligibility);
 router.get('/history', requireAuth, patientController.getHistory);
 router.get('/recommendations', requireAuth, patientController.getRecommendations);
 router.get('/summary', requireAuth, patientController.getDashboardSummary);

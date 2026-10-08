@@ -15,6 +15,7 @@ import MemoryTestScreen from './src/screens/MemoryTestScreen';
 import AttentionTestScreen from './src/screens/AttentionTestScreen';
 import VisualMemoryTestScreen from './src/screens/VisualMemoryTestScreen';
 import PatientDetailScreen from './src/screens/PatientDetailScreen';
+import PatientMoodHistoryScreen from './src/screens/PatientMoodHistoryScreen';
 import ProcessingSpeedTestScreen from './src/screens/ProcessingSpeedTestScreen';
 import ExecutiveFunctionTestScreen from './src/screens/ExecutiveFunctionTestScreen';
 import TestHistoryDetailScreen from './src/screens/TestHistoryDetailScreen';
@@ -90,7 +91,10 @@ export default function App() {
 
   function handleSelectCategory(category) {
     setSelectedCategory(category);
-    navigate('testHistoryDetail');
+    // Mood check-ins have a different shape (emotion comparison + shared
+    // notes) from the single-numeric-score categories, so they get their
+    // own screen instead of the generic TestHistoryDetailScreen.
+    navigate(category === 'mood' ? 'patientMoodHistory' : 'testHistoryDetail');
   }
 
   function handleSelectMyCategory(category) {
@@ -159,6 +163,9 @@ export default function App() {
           )}
           {screen === 'testHistoryDetail' && user && selectedPatient && selectedCategory && (
             <TestHistoryDetailScreen token={user.token} patient={selectedPatient} category={selectedCategory} onNavigate={navigate} onBack={goBack} />
+          )}
+          {screen === 'patientMoodHistory' && user && selectedPatient && (
+            <PatientMoodHistoryScreen token={user.token} patient={selectedPatient} onBack={goBack} />
           )}
           {screen === 'myHistory' && user && (
             <MyHistoryScreen onNavigate={navigate} onBack={goBack} onSelectCategory={handleSelectMyCategory} />

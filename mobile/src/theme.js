@@ -65,6 +65,7 @@ export const categoryColors = {
   bdi: { bg: '#E1E7FB', icon: '#6C7FD6' },
   sleep: { bg: '#E1E7FB', icon: '#6C7FD6' },
   weight: { bg: '#DFF5E3', icon: '#5FAE7B' },
+  mood: { bg: '#E1E7FB', icon: '#6C7FD6' },
 };
 
 // Per-menu-item accent colors for the patient/doctor dashboard grid.

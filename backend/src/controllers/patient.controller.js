@@ -1,5 +1,7 @@
 const { BdiResponse, Patient, CognitiveResult, SleepLog, WeightLog } = require('../models');
 
+const QUESTIONNAIRE_COOLDOWN_DAYS = 7;
+
 function getSeverity(totalScore) {
   if (totalScore <= 13) return 'minimal';
   if (totalScore <= 19) return 'mild';
@@ -56,6 +58,31 @@ const RECOMMENDATIONS = {
   },
 };
 
+// Shared by submitQuestionnaire and getQuestionnaireEligibility so both
+// agree on exactly the same cutoff.
+async function getEligibility(patientId) {
+  const latest = await BdiResponse.findOne({
+    where: { patient_id: patientId },
+    order: [['taken_at', 'DESC']],
+    attributes: ['id', 'total_score', 'severity', 'taken_at'],
+  });
+
+  if (!latest) {
+    return { can_submit: true, next_eligible_at: null, last_taken_at: null, last_result: null };
+  }
+
+  const lastTaken = new Date(latest.taken_at);
+  const nextEligible = new Date(lastTaken.getTime() + QUESTIONNAIRE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+  const canSubmit = Date.now() >= nextEligible.getTime();
+
+  return {
+    can_submit: canSubmit,
+    next_eligible_at: nextEligible.toISOString(),
+    last_taken_at: latest.taken_at,
+    last_result: { total_score: latest.total_score, severity: latest.severity },
+  };
+}
+
 exports.submitQuestionnaire = async (req, res) => {
   try {
     const { answers } = req.body;
@@ -68,6 +95,16 @@ exports.submitQuestionnaire = async (req, res) => {
 
     if (!patient) {
       return res.status(404).json({ message: 'Patient record not found for this user.' });
+    }
+
+    // Enforce the once-a-week limit server-side - the frontend also checks
+    // this before showing the form, but this is the real guard.
+    const eligibility = await getEligibility(patient.id);
+    if (!eligibility.can_submit) {
+      return res.status(429).json({
+        message: 'The questionnaire can only be taken once a week. Please check back later.',
+        next_eligible_at: eligibility.next_eligible_at,
+      });
     }
 
     const total_score = answers.reduce((sum, val) => sum + Number(val), 0);
@@ -90,6 +127,24 @@ exports.submitQuestionnaire = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error submitting questionnaire.' });
+  }
+};
+
+// GET /api/patient/questionnaire/eligibility
+// Lets the app check, before showing the form, whether the patient is
+// allowed to take the questionnaire again yet.
+exports.getQuestionnaireEligibility = async (req, res) => {
+  try {
+    const patient = await Patient.findOne({ where: { user_id: req.user.id } });
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient record not found for this user.' });
+    }
+
+    const eligibility = await getEligibility(patient.id);
+    res.json(eligibility);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error checking questionnaire eligibility.' });
   }
 };
 
@@ -171,9 +226,14 @@ exports.getDashboardSummary = async (req, res) => {
       order: [['logged_date', 'DESC']],
     });
 
+    // bdiHistory is sorted newest-first. Grab the newest entry BEFORE
+    // reversing, since reverse() flips the array in place and would make
+    // index 0 the oldest entry instead.
+    const latestBdi = bdiHistory[0] || null;
+
     res.json({
-      bdi_history: bdiHistory.reverse(),
-      latest_bdi: bdiHistory[0] || null,
+      bdi_history: [...bdiHistory].reverse(),
+      latest_bdi: latestBdi,
       latest_cognitive: latestCognitive,
       latest_sleep: latestSleep,
       latest_weight: latestWeight,

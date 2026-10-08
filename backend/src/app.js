@@ -7,6 +7,7 @@ const doctorRoutes = require('./routes/doctor.routes');
 const cognitiveRoutes = require('./routes/cognitive.routes');
 const logRoutes = require('./routes/log.routes');
 const medicineRoutes = require('./routes/medicine.routes');
+const activityRoutes = require('./routes/activity.routes');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/doctor', doctorRoutes);
 app.use('/api/cognitive', cognitiveRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/medicines', medicineRoutes);
+app.use('/api/activities', activityRoutes);
 
 // 404 handler
 app.use((req, res) => {

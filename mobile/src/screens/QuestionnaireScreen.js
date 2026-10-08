@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { QUESTIONNAIRE_ITEMS } from '../data/bdiPlaceholderQuestions';
-import { submitQuestionnaire } from '../api';
+import { submitQuestionnaire, getQuestionnaireEligibility } from '../api';
 import { colors, spacing, radius, shadow } from '../theme';
 
 function getSeverityStyle(severity) {
@@ -19,10 +19,42 @@ function getSeverityStyle(severity) {
   return { color: colors.primary, bg: colors.primaryLight, icon: 'checkmark-circle' };
 }
 
+function daysAndHoursUntil(isoDate) {
+  const diffMs = new Date(isoDate).getTime() - Date.now();
+  if (diffMs <= 0) return 'now';
+  const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days === 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
+  if (hours === 0) return `${days} day${days !== 1 ? 's' : ''}`;
+  return `${days} day${days !== 1 ? 's' : ''} and ${hours} hour${hours !== 1 ? 's' : ''}`;
+}
+
 export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) {
   const [answers, setAnswers] = useState({}); // { itemId: value }
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // { total_score, severity, recommendations } | null
+
+  const [checkingEligibility, setCheckingEligibility] = useState(true);
+  const [eligibility, setEligibility] = useState(null);
+
+  useEffect(() => {
+    checkEligibility();
+  }, []);
+
+  async function checkEligibility() {
+    setCheckingEligibility(true);
+    try {
+      const result = await getQuestionnaireEligibility(token);
+      setEligibility(result);
+    } catch (err) {
+      // If the check itself fails, don't block the patient from trying -
+      // the backend still enforces the real limit on submit.
+      setEligibility({ can_submit: true });
+    } finally {
+      setCheckingEligibility(false);
+    }
+  }
 
   const answeredCount = Object.keys(answers).length;
 
@@ -47,6 +79,9 @@ export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) 
       setResult(result);
     } catch (err) {
       Alert.alert('Submission failed', err.message);
+      // In case this failed because the cooldown kicked in between the
+      // eligibility check and now, refresh so the lockout screen shows.
+      checkEligibility();
     } finally {
       setLoading(false);
     }
@@ -59,6 +94,63 @@ export default function QuestionnaireScreen({ token, onNavigate, onSubmitted }) 
 
   const severityStyle = result ? getSeverityStyle(result.severity) : null;
   const specific = result?.recommendations;
+
+  if (checkingEligibility) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (eligibility && !eligibility.can_submit) {
+    const lastStyle = eligibility.last_result ? getSeverityStyle(eligibility.last_result.severity) : null;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <View style={styles.headerIconWrap}>
+              <Ionicons name="clipboard-outline" size={26} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle} numberOfLines={1}>Questionnaire</Text>
+              <Text style={styles.headerSubtitle}>Once a week</Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={[styles.body, { alignItems: 'center', paddingTop: spacing.lg }]}>
+          <View style={styles.lockIconWrap}>
+            <Ionicons name="time-outline" size={36} color={colors.primary} />
+          </View>
+          <Text style={styles.lockTitle}>Already checked in this week</Text>
+          <Text style={styles.lockSubtitle}>
+            You can take the questionnaire again in {daysAndHoursUntil(eligibility.next_eligible_at)}.
+          </Text>
+
+          {eligibility.last_result && lastStyle && (
+            <View style={[styles.lastScoreCard, { backgroundColor: lastStyle.bg }]}>
+              <Text style={styles.lastScoreLabel}>YOUR LAST SCORE</Text>
+              <Text style={[styles.lastScoreValue, { color: lastStyle.color }]}>
+                {eligibility.last_result.total_score} \u00b7 {eligibility.last_result.severity}
+              </Text>
+              <Text style={styles.lastScoreDate}>
+                Taken {new Date(eligibility.last_taken_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.lockHint}>
+            Checking in too often can make it harder to see a meaningful trend \u2014 a week between check-ins gives a clearer picture.
+          </Text>
+
+          <TouchableOpacity onPress={() => onNavigate('dashboard')} style={styles.cancelLink}>
+            <Text style={styles.linkText}>Back to dashboard</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -255,6 +347,29 @@ const styles = StyleSheet.create({
   submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelLink: { alignItems: 'center', marginBottom: 40 },
   linkText: { color: colors.primaryDark, fontSize: 14, fontWeight: '600' },
+
+  lockIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  lockTitle: { fontSize: 18, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  lockSubtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.md, paddingHorizontal: spacing.md },
+  lastScoreCard: {
+    width: '100%',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  lastScoreLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
+  lastScoreValue: { fontSize: 20, fontWeight: '700', textTransform: 'capitalize' },
+  lastScoreDate: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  lockHint: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 17, paddingHorizontal: spacing.md, marginBottom: spacing.lg },
 
   overlay: {
     flex: 1,

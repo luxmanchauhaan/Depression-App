@@ -26,7 +26,7 @@ async function authRequest(path, body, token) {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Something went wrong');
+    throw new Error(data.error || data.message || 'Something went wrong');
   }
   return data;
 }
@@ -133,6 +133,10 @@ export function submitQuestionnaire(token, orderedAnswers) {
   return authRequest('/api/patient/questionnaire', { answers: orderedAnswers }, token);
 }
 
+export function getQuestionnaireEligibility(token) {
+  return authGet('/api/patient/questionnaire/eligibility', token);
+}
+
 export function getQuestionnaireHistory(token) {
   return authGet('/api/patient/history', token);
 }
@@ -179,6 +183,10 @@ export function getWeightHistory(token) {
 
 export function getPatientWeightHistory(token, patientId) {
   return authGet(`/api/doctor/patients/${patientId}/weight-history`, token);
+}
+
+export function getPatientMoodHistory(token, patientId) {
+  return authGet(`/api/doctor/patients/${patientId}/mood-history`, token);
 }
 
 export function createMedicine(token, name, dosage, times) {
@@ -228,4 +236,25 @@ export function getMoodHistory(token) {
 
 export function updateMoodLogNotes(token, logId, notes) {
   return authPatchBody(`/api/logs/mood/${logId}`, { notes }, token);
+}
+
+export function createActivity(token, category, title, description, assignedDate, durationMinutes) {
+  return authRequest(
+    '/api/activities',
+    { category, title, description, assigned_date: assignedDate, duration_minutes: durationMinutes },
+    token
+  );
+}
+
+export function getActivities(token, date) {
+  const query = date ? `?date=${date}` : '';
+  return authGet(`/api/activities${query}`, token);
+}
+
+export function setActivityComplete(token, activityId, completed) {
+  return authPatchBody(`/api/activities/${activityId}/complete`, { completed }, token);
+}
+
+export function deleteActivity(token, activityId) {
+  return authDelete(`/api/activities/${activityId}`, token);
 }

@@ -192,4 +192,20 @@ CREATE TABLE emotion_logs (
   CONSTRAINT emotion_logs_ibfk_1 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE activities (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  patient_id    INT NOT NULL,
+  category      ENUM('yoga', 'meditation', 'music', 'physical_activity') NOT NULL,
+  title         VARCHAR(150) NOT NULL,
+  description   VARCHAR(500),
+  assigned_date DATE NOT NULL,
+  completed     BOOLEAN DEFAULT FALSE,
+  completed_at  DATETIME NULL,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+  INDEX idx_patient_assigned_date (patient_id, assigned_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE activities ADD COLUMN duration_minutes INT NULL AFTER description;
+
 DROP TABLE emotion_logs;

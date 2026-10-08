@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Animated, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { submitMoodLog } from '../api';
+import { submitMoodLog, updateMoodLogNotes } from '../api';
 import { colors, spacing, radius, shadow } from '../theme';
 
 const THEME = { bg: '#E1E7FB', icon: '#6C7FD6' };
@@ -147,6 +147,9 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
   const [framesCaptured, setFramesCaptured] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [shareText, setShareText] = useState('');
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const cameraRef = useRef(null);
   const framesRef = useRef([]);
@@ -265,6 +268,22 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
       Alert.alert('Check-in failed', err.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleShareWithDoctor() {
+    if (!shareText.trim()) {
+      Alert.alert('Nothing to share', 'Write a few words first, or you can skip this.');
+      return;
+    }
+    setSharing(true);
+    try {
+      await updateMoodLogNotes(token, result.id, shareText.trim());
+      setShared(true);
+    } catch (err) {
+      Alert.alert('Could not share', err.message);
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -440,7 +459,11 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
   const sortedScores = Object.entries(detected.scores || {}).sort((a, b) => b[1] - a[1]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <View style={[styles.header, { backgroundColor: THEME.icon }]}>
         <View style={[styles.headerIconWrap, { backgroundColor: THEME.bg }]}>
           <Ionicons name="checkmark-circle" size={28} color={THEME.icon} />
@@ -448,7 +471,7 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
         <Text style={styles.headerTitle}>Check-In Complete</Text>
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.lg }}>
+      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: spacing.lg }} keyboardShouldPersistTaps="handled">
         <View style={styles.compareRow}>
           <View style={styles.compareCard}>
             <Text style={styles.compareLabel}>YOU SAID</Text>
@@ -478,8 +501,48 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
 
         {result.mismatch_prompt && (
           <View style={styles.mismatchCard}>
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={THEME.icon} style={{ marginRight: 8 }} />
-            <Text style={styles.mismatchText}>{result.mismatch_prompt}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={THEME.icon} style={{ marginRight: 8, marginTop: 2 }} />
+              <Text style={[styles.mismatchText, { flex: 1 }]}>{result.mismatch_prompt}</Text>
+            </View>
+
+            {shared ? (
+              <View style={styles.sharedConfirm}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.sharedConfirmText}>Shared with your doctor</Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  style={styles.shareInput}
+                  placeholder="Write anything you'd like your doctor to know... (optional)"
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  value={shareText}
+                  onChangeText={setShareText}
+                />
+                <View style={styles.shareButtonRow}>
+                  <TouchableOpacity
+                    style={styles.skipButton}
+                    onPress={() => setShared(true)}
+                    disabled={sharing}
+                  >
+                    <Text style={styles.skipButtonText}>Skip</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.shareButton, { backgroundColor: THEME.icon }, sharing && { opacity: 0.6 }]}
+                    onPress={handleShareWithDoctor}
+                    disabled={sharing}
+                  >
+                    {sharing ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.shareButtonText}>Share with Doctor</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -503,7 +566,7 @@ export default function MoodCheckInScreen({ token, onNavigate, onBack }) {
           <Text style={styles.primaryButtonText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -595,10 +658,49 @@ const styles = StyleSheet.create({
   compareConfidence: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   compareDivider: { paddingHorizontal: spacing.xs },
   mismatchCard: {
-    flexDirection: 'row', alignItems: 'flex-start', backgroundColor: THEME.bg, borderRadius: radius.md,
+    backgroundColor: THEME.bg, borderRadius: radius.md,
     padding: spacing.sm, marginBottom: spacing.md,
   },
   mismatchText: { fontSize: 13, color: THEME.icon, flex: 1, lineHeight: 18, fontWeight: '500' },
+  shareInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    fontSize: 13,
+    color: colors.text,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    marginTop: spacing.sm,
+  },
+  shareButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  skipButton: {
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+    marginRight: spacing.xs,
+  },
+  skipButtonText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  shareButton: {
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareButtonText: { fontSize: 13, color: '#fff', fontWeight: '600' },
+  sharedConfirm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  sharedConfirmText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
   breakdownTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
   breakdownCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, ...shadow },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
