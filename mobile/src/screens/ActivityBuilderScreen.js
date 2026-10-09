@@ -219,9 +219,9 @@ export default function ActivityBuilderScreen({ user }) {
     >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Activity Builder</Text>
-        <Text style={styles.headerSubtitle}>{todayLabel()}</Text>
+        <Text style={styles.headerSubtitle}>Stays until you delete it</Text>
         {activities.length > 0 && (
-          <Text style={styles.headerProgress}>{doneCount} of {activities.length} done today</Text>
+          <Text style={styles.headerProgress}>{doneCount} of {activities.length} completed</Text>
         )}
       </View>
 
@@ -233,8 +233,8 @@ export default function ActivityBuilderScreen({ user }) {
             {activities.length === 0 && !showForm && (
               <View style={styles.emptyCard}>
                 <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-                <Text style={styles.emptyText}>No activities for today yet.</Text>
-                <Text style={styles.emptySubtext}>Add something small you'd like to do today.</Text>
+                <Text style={styles.emptyText}>No activities yet.</Text>
+                <Text style={styles.emptySubtext}>Add something you'd like to do \u2014 it'll stay here until you mark it done or remove it.</Text>
               </View>
             )}
 
@@ -263,11 +263,18 @@ export default function ActivityBuilderScreen({ user }) {
                       {activity.description ? (
                         <Text style={styles.activityDescription}>{activity.description}</Text>
                       ) : null}
-                      {activity.duration_minutes ? (
-                        <Text style={styles.durationTag}>
-                          <Ionicons name="time-outline" size={11} /> {activity.duration_minutes} min
-                        </Text>
-                      ) : null}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {activity.duration_minutes ? (
+                          <Text style={styles.durationTag}>
+                            <Ionicons name="time-outline" size={11} /> {activity.duration_minutes} min
+                          </Text>
+                        ) : null}
+                        {activity.assigned_date && activity.assigned_date !== todayDateOnly() ? (
+                          <Text style={[styles.durationTag, { marginLeft: activity.duration_minutes ? spacing.sm : 0 }]}>
+                            Added {new Date(activity.assigned_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </Text>
+                        ) : null}
+                      </View>
                     </View>
 
                     <TouchableOpacity onPress={() => handleDelete(activity)} style={styles.deleteButton}>

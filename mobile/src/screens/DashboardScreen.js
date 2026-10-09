@@ -125,6 +125,11 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
   const bdiHistory = fullBdiHistory.slice(-6);
   const CHART_HEIGHT = 180;
   const Y_LABEL_WIDTH = 22;
+  // chart-kit leaves ~64px of blank space on the left of the plot for y-axis
+  // numbers. We clip this much of that blank strip away so the numbers sit
+  // right next to the "Score" label. Increase to tighten further, decrease to
+  // loosen (don't go past ~40 or the numbers themselves start to get clipped).
+  const Y_AXIS_TRIM = 34;
   const screenWidth = Dimensions.get('window').width - (spacing.md * 2) - (spacing.sm * 2) - Y_LABEL_WIDTH;
 
   // Month/year label shown once above the chart, since the x-axis now shows day numbers only.
@@ -199,24 +204,26 @@ export default function DashboardScreen({ user, onLogout, onNavigate }) {
                     <View style={[styles.axisLabelYWrap, { height: CHART_HEIGHT }]}>
                       <Text style={styles.axisLabelY}>Score</Text>
                     </View>
-                    <LineChart
-                      data={chartData}
-                      width={screenWidth}
-                      height={CHART_HEIGHT}
-                      withInnerLines={false}
-                      chartConfig={{
-                        backgroundColor: colors.surface,
-                        backgroundGradientFrom: colors.surface,
-                        backgroundGradientTo: colors.surface,
-                        decimalPlaces: 0,
-                        color: () => colors.primary,
-                        labelColor: () => colors.textMuted,
-                        propsForDots: { r: '4', strokeWidth: '2', stroke: colors.primary, fill: colors.surface },
-                        propsForLabels: { fontSize: 11 },
-                      }}
-                      bezier
-                      style={{ borderRadius: radius.md }}
-                    />
+                    <View style={{ width: screenWidth, height: CHART_HEIGHT, overflow: 'hidden' }}>
+                      <LineChart
+                        data={chartData}
+                        width={screenWidth + Y_AXIS_TRIM}
+                        height={CHART_HEIGHT}
+                        withInnerLines={false}
+                        chartConfig={{
+                          backgroundColor: colors.surface,
+                          backgroundGradientFrom: colors.surface,
+                          backgroundGradientTo: colors.surface,
+                          decimalPlaces: 0,
+                          color: () => colors.primary,
+                          labelColor: () => colors.textMuted,
+                          propsForDots: { r: '4', strokeWidth: '2', stroke: colors.primary, fill: colors.surface },
+                          propsForLabels: { fontSize: 11 },
+                        }}
+                        bezier
+                        style={{ borderRadius: radius.md, marginLeft: -Y_AXIS_TRIM }}
+                      />
+                    </View>
                   </View>
                   <Text style={styles.axisLabelX}>Date of Assessment</Text>
                   <View style={styles.captionBadge}>

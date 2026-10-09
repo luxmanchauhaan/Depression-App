@@ -57,8 +57,11 @@ exports.createActivity = async (req, res) => {
   }
 };
 
-// GET /api/activities?date=YYYY-MM-DD
-// Defaults to today's activities if no date is given.
+// GET /api/activities            -> every activity the patient has, regardless
+//                                   of the date it was added (the main list -
+//                                   activities persist until deleted).
+// GET /api/activities?date=YYYY-MM-DD -> only activities added on that date
+//                                        (used by the history panel).
 exports.getActivities = async (req, res) => {
   try {
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });
@@ -66,14 +69,20 @@ exports.getActivities = async (req, res) => {
       return res.status(404).json({ message: 'Patient record not found for this user.' });
     }
 
-    const date = req.query.date || todayDateOnly();
+    const { date } = req.query;
+    const where = { patient_id: patient.id };
+    if (date) {
+      where.assigned_date = date;
+    }
 
     const activities = await Activity.findAll({
-      where: { patient_id: patient.id, assigned_date: date },
-      order: [['created_at', 'ASC']],
+      where,
+      // Pending activities first, then oldest-first within each group, so
+      // the main list surfaces what still needs doing.
+      order: [['completed', 'ASC'], ['created_at', 'ASC']],
     });
 
-    res.json({ activities, date });
+    res.json({ activities, date: date || null });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching activities.' });
