@@ -1,4 +1,4 @@
-const { BdiResponse, Patient, CognitiveResult, SleepLog, WeightLog } = require('../models');
+const { BdiResponse, Patient, CognitiveResult, SleepLog, WeightLog, Doctor, User } = require('../models');
 
 const QUESTIONNAIRE_COOLDOWN_DAYS = 7;
 
@@ -241,5 +241,36 @@ exports.getDashboardSummary = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error fetching dashboard summary.' });
+  }
+};
+
+// GET /api/patient/doctor
+// Returns the doctor this patient is linked to, for the profile screen.
+exports.getMyDoctor = async (req, res) => {
+  try {
+    const patient = await Patient.findOne({
+      where: { user_id: req.user.id },
+      include: [{ model: Doctor, include: [{ model: User, attributes: ['full_name'] }] }],
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient record not found for this user.' });
+    }
+
+    const doctor = patient.Doctor;
+    if (!doctor) {
+      return res.json({ doctor: null });
+    }
+
+    res.json({
+      doctor: {
+        full_name: doctor.User ? doctor.User.full_name : null,
+        doctor_code: doctor.doctor_code,
+        specialization: doctor.specialization,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error fetching assigned doctor.' });
   }
 };

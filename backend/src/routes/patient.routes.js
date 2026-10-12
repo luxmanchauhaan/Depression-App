@@ -8,5 +8,6 @@ router.get('/questionnaire/eligibility', requireAuth, patientController.getQuest
 router.get('/history', requireAuth, patientController.getHistory);
 router.get('/recommendations', requireAuth, patientController.getRecommendations);
 router.get('/summary', requireAuth, patientController.getDashboardSummary);
+router.get('/doctor', requireAuth, patientController.getMyDoctor);
 
 module.exports = router;

@@ -217,6 +217,10 @@ export function getDashboardSummary(token) {
   return authGet('/api/patient/summary', token);
 }
 
+export function getMyDoctor(token) {
+  return authGet('/api/patient/doctor', token);
+}
+
 export function submitMoodLog(token, moodScore, notes, framesBase64, selfReportedEmotion) {
   return authRequest(
     '/api/logs/mood',

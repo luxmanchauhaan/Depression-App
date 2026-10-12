@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getProfile, changePassword } from '../api';
+import { getProfile, changePassword, getMyDoctor } from '../api';
 import { colors, spacing, radius, typography, shadow, buttonBase } from '../theme';
 
 function formatDate(value) {
@@ -20,6 +20,10 @@ export default function ProfileScreen({ user, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // undefined = still loading, null = patient has no assigned doctor
+  const [doctor, setDoctor] = useState(undefined);
+  const [doctorError, setDoctorError] = useState(false);
+
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -28,6 +32,9 @@ export default function ProfileScreen({ user, onLogout }) {
 
   useEffect(() => {
     loadProfile();
+    if (user.role === 'patient') {
+      loadDoctor();
+    }
   }, []);
 
   async function loadProfile() {
@@ -40,6 +47,23 @@ export default function ProfileScreen({ user, onLogout }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadDoctor() {
+    try {
+      const result = await getMyDoctor(user.token);
+      setDoctor(result.doctor);
+    } catch (err) {
+      console.log('Failed to load assigned doctor:', err.message);
+      setDoctorError(true);
+    }
+  }
+
+  function doctorField(value) {
+    if (doctorError) return 'Unavailable';
+    if (doctor === undefined) return 'Loading...';
+    if (doctor === null) return 'Not assigned';
+    return value || 'Not set';
   }
 
   async function handleChangePassword() {
@@ -146,6 +170,32 @@ export default function ProfileScreen({ user, onLogout }) {
                 </>
               )}
             </View>
+
+            {user.role === 'patient' && (
+              <>
+                <Text style={styles.sectionHeading}>Your Doctor</Text>
+                <View style={styles.detailsCard}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Doctor Name</Text>
+                    <Text style={styles.detailValue}>{doctorField(doctor?.full_name)}</Text>
+                  </View>
+                  <View style={styles.detailDivider} />
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Doctor ID</Text>
+                    <Text style={styles.detailValue}>{doctorField(doctor?.doctor_code)}</Text>
+                  </View>
+                  {doctor?.specialization ? (
+                    <>
+                      <View style={styles.detailDivider} />
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Specialization</Text>
+                        <Text style={styles.detailValue}>{doctor.specialization}</Text>
+                      </View>
+                    </>
+                  ) : null}
+                </View>
+              </>
+            )}
 
             <Text style={styles.sectionHeading}>Security</Text>
             <TouchableOpacity
