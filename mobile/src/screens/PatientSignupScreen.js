@@ -63,6 +63,7 @@ export default function PatientSignupScreen({ onNavigate, onAuth }) {
       <TextInput
         style={styles.input}
         placeholder="Date of birth (YYYY-MM-DD) - optional"
+        placeholderTextColor="#999"
         value={dateOfBirth}
         onChangeText={setDateOfBirth}
         keyboardType="numbers-and-punctuation"
