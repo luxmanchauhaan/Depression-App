@@ -27,8 +27,8 @@ export default function LoginScreen({ onNavigate, onAuth }) {
     <View style={styles.container}>
       <Text style={styles.title}>Log in</Text>
 
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#999" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#999"secureTextEntry value={password} onChangeText={setPassword} />
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log in</Text>}

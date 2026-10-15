@@ -55,10 +55,10 @@ export default function PatientSignupScreen({ onNavigate, onAuth }) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Patient sign up</Text>
 
-      <TextInput style={styles.input} placeholder="Full name" value={fullName} onChangeText={setFullName} />
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <TextInput style={styles.input} placeholder="Doctor code (given by your doctor)" autoCapitalize="characters" value={doctorCode} onChangeText={setDoctorCode} />
+      <TextInput style={styles.input} placeholder="Full name" placeholderTextColor="#999" value={fullName} onChangeText={setFullName} />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#999" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#999" secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput style={styles.input} placeholder="Doctor code (given by your doctor)" placeholderTextColor="#999" autoCapitalize="characters" value={doctorCode} onChangeText={setDoctorCode} />
 
       <TextInput
         style={styles.input}

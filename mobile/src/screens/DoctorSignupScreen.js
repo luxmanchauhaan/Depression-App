@@ -36,11 +36,11 @@ export default function DoctorSignupScreen({ onNavigate, onAuth }) {
     <View style={styles.container}>
       <Text style={styles.title}>Doctor sign up</Text>
 
-      <TextInput style={styles.input} placeholder="Full name" value={fullName} onChangeText={setFullName} />
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <TextInput style={styles.input} placeholder="Doctor code (you choose this, e.g. DR001)" autoCapitalize="characters" value={doctorCode} onChangeText={setDoctorCode} />
-      <TextInput style={styles.input} placeholder="Specialization (optional)" value={specialization} onChangeText={setSpecialization} />
+      <TextInput style={styles.input} placeholder="Full name" placeholderTextColor="#999" value={fullName} onChangeText={setFullName} />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#999" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#999" secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput style={styles.input} placeholder="Doctor code (you choose this, e.g. DR001)" placeholderTextColor="#999" autoCapitalize="characters" value={doctorCode} onChangeText={setDoctorCode} />
+      <TextInput style={styles.input} placeholder="Specialization (optional)" placeholderTextColor="#999" value={specialization} onChangeText={setSpecialization} />
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create account</Text>}
