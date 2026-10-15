@@ -7,7 +7,7 @@ const doctorRoutes = require('./routes/doctor.routes');
 const cognitiveRoutes = require('./routes/cognitive.routes');
 const logRoutes = require('./routes/log.routes');
 const medicineRoutes = require('./routes/medicine.routes');
-const activityRoutes = require('./routes/activity.routes');
+const activityRoutes = require('./routes/Activity.routes');
 
 const app = express();
 
