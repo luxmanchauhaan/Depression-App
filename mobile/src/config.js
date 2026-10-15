@@ -5,4 +5,6 @@
 // Find your IP on Windows: open Command Prompt, run `ipconfig`,
 // look for "IPv4 Address" under your active Wi-Fi adapter.
 
-export const API_URL = 'http://172.17.6.179:4000';
+// export const API_URL = 'http://172.17.6.179:4000';
+
+export const API_URL = 'https://depression-app-production.up.railway.app';
