@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const activityController = require('../controllers/activity.controller');
+const activityController = require('../controllers/Activity.controller');
 const { requireAuth } = require('../middleware/auth.middleware');
 
 router.post('/', requireAuth, activityController.createActivity);
