@@ -10,7 +10,7 @@ async function callEmotionService(imageBase64) {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'X-API-Key': process.env.EMOTION_SERVICE_KEY || ''
+      'x-internal-key': process.env.EMOTION_SERVICE_KEY || ''
     },
     body: JSON.stringify({ image_base64: imageBase64 }),
   });
