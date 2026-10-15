@@ -10,7 +10,7 @@ const WeightLog = require('./weightLog.model');
 const Medicine = require('./medicine.model');
 const MedicineLog = require('./medicineLog.model');
 const EmotionCapture = require('./emotionCapture.model');
-const Activity = require('./activity.model');
+const Activity = require('./Activity.model');
 
 
 // User <-> Doctor (1:1)
