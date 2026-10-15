@@ -8,7 +8,10 @@ async function callEmotionService(imageBase64) {
   const url = `${process.env.AI_SERVICE_URL || 'http://localhost:5001'}/analyze`;
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-API-Key': process.env.EMOTION_SERVICE_KEY || ''
+    },
     body: JSON.stringify({ image_base64: imageBase64 }),
   });
   const data = await response.json();
