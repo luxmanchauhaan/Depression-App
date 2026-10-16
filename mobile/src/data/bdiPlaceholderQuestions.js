@@ -204,7 +204,7 @@ export const QUESTIONNAIRE_ITEMS = [
         prompt: '',
         options: [
           { label: 'I have not noticed any recent change in my interest in sex.', value: 0 },
-          { label: 'I have not noticed any recent change in my interest in sex.', value: 1 },
+          { label: 'I am less interested in sex than I used to be.', value: 1 },
           { label: 'I have almost no interest in sex.', value: 2 },
           { label: 'I have lost interest in sex completely.', value: 3 },
         ],
