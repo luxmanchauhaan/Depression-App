@@ -9,7 +9,11 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.bfcet.manodrishti"
+      "package": "com.bfcet.manodrishti",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FEFEFE"
+      }
     },
     "plugins": [
       "expo-status-bar"
