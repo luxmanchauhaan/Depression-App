@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, shadow } from '../theme';
+import { colors, spacing, radius } from '../theme';
 
 const DISPLAY_DURATION_MS = 4000;
 
@@ -33,7 +33,7 @@ export default function SplashScreen({ onFinish }) {
           <Ionicons name="sunny-outline" size={44} color="#fff" />
         </View>
         <Text style={styles.appName}>Manodrishti</Text>
-        <Text style={styles.tagline}>मनोदृष्टि · Vision of the Mind</Text>
+        <Text style={styles.tagline}>HEALTHY MIND HAPPIER YOU</Text>
 
         <Animated.View style={[styles.fullFormCard, { opacity: cardFade }]}>
           <Text style={styles.fullFormLabel}>WHAT IT STANDS FOR</Text>
@@ -66,10 +66,10 @@ const styles = StyleSheet.create({
   },
   content: { alignItems: 'center', width: '100%' },
   iconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    width: 100,
+    height: 100,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
